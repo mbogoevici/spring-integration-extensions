@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:int="http://www.springframework.org/schema/integration"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd">
+
+
+	<int:channel id="input"/>
+
+	<bean id="kafkaSimpleConsumerMessageSource" class="org.springframework.integration.kafka.kafkasimpleconsumer.KafkaSimpleConsumerMessageSource">
+		<constructor-arg index="0">
+			<bean class="org.springframework.integration.kafka.kafkasimpleconsumer.BrokerAddress">
+				<constructor-arg index="0" value="localhost"/>
+				<constructor-arg index="1" value="9092"/>
+			</bean>
+		</constructor-arg>
+		<constructor-arg index="1" value="kafka-source-test"/>
+		<constructor-arg index="2" value="0"/>
+		<constructor-arg index="3" value="-2"/>
+		<property name="clientId" value="fluffy"/>
+	</bean>
+
+	<int:inbound-channel-adapter channel="input" ref="kafkaSimpleConsumerMessageSource">
+		<int:poller fixed-delay="100" time-unit="MILLISECONDS" max-messages-per-poll="-1"/>
+	</int:inbound-channel-adapter>
+
+	<int:outbound-channel-adapter channel="input" method="log">
+		<bean class="org.springframework.integration.kafka.support.SimpleLogger"/>
+	</int:outbound-channel-adapter>
+</beans>
