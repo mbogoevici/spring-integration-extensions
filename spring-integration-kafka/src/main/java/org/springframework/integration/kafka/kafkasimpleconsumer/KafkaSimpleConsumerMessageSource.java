@@ -17,7 +17,6 @@
 
 package org.springframework.integration.kafka.kafkasimpleconsumer;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,9 +48,9 @@ public class KafkaSimpleConsumerMessageSource extends IntegrationObjectSupport i
 
 	private long offset;
 
-	public KafkaSimpleConsumerMessageSource(BrokerAddress brokerAddress, String topic, int partition, long startReferenceDate) {
+	public KafkaSimpleConsumerMessageSource(KafkaBrokerAddress kafkaBrokerAddress, String topic, int partition, long startReferenceDate) {
 		topicAndPartition = new TopicAndPartition(topic, partition);
-		kafkaTemplate = new KafkaTemplate(new KafkaConfiguration(Collections.singletonList(brokerAddress), Collections.singletonList(topicAndPartition)));
+		kafkaTemplate = new KafkaTemplate(new KafkaConfiguration(Collections.singletonList(kafkaBrokerAddress), Collections.singletonList(topicAndPartition)));
 		offset = kafkaTemplate.getKafkaResolver().getAdminBroker().fetchInitialOffset(topicAndPartition, startReferenceDate).getResult().get(topicAndPartition);
 	}
 

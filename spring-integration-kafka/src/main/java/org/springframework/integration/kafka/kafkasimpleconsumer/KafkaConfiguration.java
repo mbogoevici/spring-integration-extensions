@@ -29,20 +29,20 @@ import kafka.common.TopicAndPartition;
  */
 public class KafkaConfiguration {
 
-	private List<BrokerAddress> brokerAddresses;
+	private List<KafkaBrokerAddress> brokerAddresses;
 
 	private List<TopicAndPartition> topicAndPartitions;
 
-	public KafkaConfiguration(List<BrokerAddress> brokerAddresses, List<TopicAndPartition> topicAndPartitions) {
+	public KafkaConfiguration(List<KafkaBrokerAddress> brokerAddresses, List<TopicAndPartition> topicAndPartitions) {
 		this.brokerAddresses = brokerAddresses;
 		this.topicAndPartitions = topicAndPartitions;
 	}
 
-	public List<BrokerAddress> getBrokerAddresses() {
+	public List<KafkaBrokerAddress> getBrokerAddresses() {
 		return brokerAddresses;
 	}
 
-	public void setBrokerAddresses(List<BrokerAddress> brokerAddresses) {
+	public void setBrokerAddresses(List<KafkaBrokerAddress> brokerAddresses) {
 		this.brokerAddresses = brokerAddresses;
 	}
 

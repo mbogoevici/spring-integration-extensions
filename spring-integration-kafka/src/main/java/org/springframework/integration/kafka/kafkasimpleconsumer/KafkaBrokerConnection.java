@@ -64,22 +64,22 @@ public class KafkaBrokerConnection {
 
 	private final static AtomicInteger correlationIdCounter = new AtomicInteger(new Random(new Date().getTime()).nextInt());
 
-	private BrokerAddress brokerAddress;
+	private KafkaBrokerAddress brokerAddress;
 
-	public KafkaBrokerConnection(BrokerAddress brokerAddress) {
+	public KafkaBrokerConnection(KafkaBrokerAddress brokerAddress) {
 		this(brokerAddress, DEFAULT_CLIENT_ID);
 	}
 
-	public KafkaBrokerConnection(BrokerAddress brokerAddress, String clientId) {
+	public KafkaBrokerConnection(KafkaBrokerAddress brokerAddress, String clientId) {
 		this(brokerAddress, clientId, DEFAULT_SOCKET_TIMEOUT, DEFAULT_BUFFER_SIZE);
 	}
 
-	public KafkaBrokerConnection(BrokerAddress brokerAddress, String clientId, int bufferSize, int soTimeout) {
+	public KafkaBrokerConnection(KafkaBrokerAddress brokerAddress, String clientId, int bufferSize, int soTimeout) {
 		this.brokerAddress = brokerAddress;
 		this.simpleConsumer = new SimpleConsumer(brokerAddress.getHost(), brokerAddress.getPort(), soTimeout, bufferSize, clientId);
 	}
 
-	public BrokerAddress getBrokerAddress() {
+	public KafkaBrokerAddress getBrokerAddress() {
 		return brokerAddress;
 	}
 
@@ -106,7 +106,7 @@ public class KafkaBrokerConnection {
 		return kafkaResultBuilder.build();
 	}
 
-	public KafkaResult<Long> fetchOffset(TopicAndPartition topicAndPartition) {
+	public KafkaResult<Long> fetchOffsetforConsumer(TopicAndPartition topicAndPartition) {
 		return fetchOffsetForConsumer(Collections.singletonList(topicAndPartition));
 	}
 
@@ -156,10 +156,10 @@ public class KafkaBrokerConnection {
 	}
 
 	public KafkaResult<Long> commitOffset(TopicAndPartition topicAndPartition, long offset) {
-		return commitOffset(Collections.singletonMap(topicAndPartition, offset));
+		return commitOffsets(Collections.singletonMap(topicAndPartition, offset));
 	}
 
-	public KafkaResult<Long> commitOffset(Map<TopicAndPartition, Long> newOffsets) {
+	public KafkaResult<Long> commitOffsets(Map<TopicAndPartition, Long> newOffsets) {
 		Map<TopicAndPartition, OffsetMetadataAndError> requestInfo = new HashMap<TopicAndPartition, OffsetMetadataAndError>();
 		for (Map.Entry<TopicAndPartition, Long> newOffsetEntry : newOffsets.entrySet()) {
 			requestInfo.put(
@@ -180,14 +180,14 @@ public class KafkaBrokerConnection {
 		return kafkaResultBuilder.build();
 	}
 
-	public KafkaResult<BrokerAddress> findLeaders(String topic) {
+	public KafkaResult<KafkaBrokerAddress> findLeader(String topic) {
 		return findLeaders(Collections.singletonList(topic));
 	}
 
-	public KafkaResult<BrokerAddress> findLeaders(List<String> topics) {
+	public KafkaResult<KafkaBrokerAddress> findLeaders(List<String> topics) {
 		TopicMetadataRequest topicMetadataRequest = new TopicMetadataRequest(new ArrayList<String>(topics), createCorrelationId());
 		TopicMetadataResponse topicMetadataResponse = simpleConsumer.send(topicMetadataRequest);
-		KafkaResultBuilder<BrokerAddress> kafkaResultBuilder = new KafkaResultBuilder<BrokerAddress>();
+		KafkaResultBuilder<KafkaBrokerAddress> kafkaResultBuilder = new KafkaResultBuilder<KafkaBrokerAddress>();
 		for (TopicMetadata topicMetadata : topicMetadataResponse.topicsMetadata()) {
 			if (topicMetadata.errorCode() != ErrorMapping.NoError()) {
 				kafkaResultBuilder.add(new TopicAndPartition(topicMetadata.topic(), -1)).withError(topicMetadata.errorCode());
@@ -195,7 +195,7 @@ public class KafkaBrokerConnection {
 			else {
 				for (PartitionMetadata partitionMetadata : topicMetadata.partitionsMetadata()) {
 					if (ErrorMapping.NoError() == partitionMetadata.errorCode()) {
-						kafkaResultBuilder.add(new TopicAndPartition(topicMetadata.topic(), partitionMetadata.partitionId())).withResult(new BrokerAddress(partitionMetadata.leader().host(), partitionMetadata.leader().port()));
+						kafkaResultBuilder.add(new TopicAndPartition(topicMetadata.topic(), partitionMetadata.partitionId())).withResult(new KafkaBrokerAddress(partitionMetadata.leader().host(), partitionMetadata.leader().port()));
 					} else {
 						kafkaResultBuilder.add(new TopicAndPartition(topicMetadata.topic(), partitionMetadata.partitionId())).withError(partitionMetadata.errorCode());
 					}

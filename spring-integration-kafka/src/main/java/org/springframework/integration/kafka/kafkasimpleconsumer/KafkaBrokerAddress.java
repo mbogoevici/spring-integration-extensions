@@ -22,7 +22,7 @@ import org.springframework.util.StringUtils;
 /**
  * @author Marius Bogoevici
  */
-public class BrokerAddress {
+public class KafkaBrokerAddress {
 
 	public static final int DEFAULT_PORT = 9092;
 
@@ -30,7 +30,7 @@ public class BrokerAddress {
 
 	private int port;
 
-	public BrokerAddress(String host, int port) {
+	public KafkaBrokerAddress(String host, int port) {
 		if (StringUtils.isEmpty(host)) {
 			throw new IllegalArgumentException("Host cannot be empty");
 		}
@@ -38,20 +38,20 @@ public class BrokerAddress {
 		this.port = port;
 	}
 
-	public BrokerAddress(String host) {
+	public KafkaBrokerAddress(String host) {
 		this(host, DEFAULT_PORT);
 	}
 
 
-	public static BrokerAddress fromAddress(String address)  {
+	public static KafkaBrokerAddress fromAddress(String address)  {
 		String[] split = address.split(":");
 		if (split.length == 0 || split.length > 2) {
 			throw new IllegalArgumentException("Expected format <host>[:<port>]");
 		}
 		if (split.length == 2) {
-			return new BrokerAddress(split[0], Integer.parseInt(split[1]));
+			return new KafkaBrokerAddress(split[0], Integer.parseInt(split[1]));
 		} else {
-			return new BrokerAddress(split[0]);
+			return new KafkaBrokerAddress(split[0]);
 		}
 
 	}
@@ -81,12 +81,12 @@ public class BrokerAddress {
 			return false;
 		}
 
-		BrokerAddress brokerAddress = (BrokerAddress) o;
+		KafkaBrokerAddress kafkaBrokerAddress = (KafkaBrokerAddress) o;
 
-		if (port != brokerAddress.port) {
+		if (port != kafkaBrokerAddress.port) {
 			return false;
 		}
-		if (!host.equals(brokerAddress.host)) {
+		if (!host.equals(kafkaBrokerAddress.host)) {
 			return false;
 		}
 
