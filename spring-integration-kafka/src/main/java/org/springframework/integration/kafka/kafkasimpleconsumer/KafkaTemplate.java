@@ -17,6 +17,7 @@
 
 package org.springframework.integration.kafka.kafkasimpleconsumer;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.gs.collections.api.block.function.Function;
@@ -34,12 +35,15 @@ public class KafkaTemplate {
 
 	private final KafkaResolver kafkaResolver;
 
+	private KafkaConfiguration kafkaConfiguration;
+
 	public KafkaTemplate(KafkaConfiguration kafkaConfiguration) {
+		this.kafkaConfiguration = kafkaConfiguration;
 		this.kafkaResolver = new KafkaResolver(kafkaConfiguration);
 	}
 
 	public List<KafkaBrokerConnection> getAllBrokers() {
-		return null;
+		return new ArrayList<KafkaBrokerConnection>(kafkaResolver.resolveBrokers(kafkaConfiguration.getPartitions()).values());
 	}
 
 	public KafkaResolver getKafkaResolver() {
@@ -54,10 +58,11 @@ public class KafkaTemplate {
 
 	}
 
-	public void convertAndSend() {}
+	public void convertAndSend() {
+	}
 
-	public Iterable<KafkaMessage> receive(final Partition partition, long offset) {
-		KafkaResult<MessageSet> fetch = kafkaResolver.resolveBroker(partition).fetch(new FetchTarget(partition, offset));
+	public Iterable<KafkaMessage> receive(final Partition partition, long offset, int maxSize) {
+		KafkaResult<MessageSet> fetch = kafkaResolver.resolveBroker(partition).fetch(new KafkaMessageFetchRequest(partition, offset, maxSize));
 		if (fetch.getErrors().size() > 0) {
 			throw new RuntimeException(ErrorMapping.exceptionFor(fetch.getErrors().values().iterator().next()));
 		}

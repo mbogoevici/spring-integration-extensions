@@ -47,6 +47,8 @@ public class KafkaMessageListenerContainer implements SmartLifecycle{
 
 	private String clientId;
 
+	private int maxSize = 10000;
+
 	public KafkaMessageListenerContainer(KafkaConfiguration kafkaConfiguration, MetadataStore metadataStore, Partition partition, long referencePoint) {
 		this.referencePoint = referencePoint;
 		this.kafkaTemplate = new KafkaTemplate(kafkaConfiguration);
@@ -110,12 +112,20 @@ public class KafkaMessageListenerContainer implements SmartLifecycle{
 		this.clientId = clientId;
 	}
 
+	public int getMaxSize() {
+		return maxSize;
+	}
+
+	public void setMaxSize(int maxSize) {
+		this.maxSize = maxSize;
+	}
+
 	public class FetchTask implements Runnable {
 		@Override
 		public void run() {
 			KafkaMessageListenerContainer kafkaMessageListenerContainer = KafkaMessageListenerContainer.this;
 			while(running.get()) {
-				Iterable<KafkaMessage> receive = kafkaTemplate.receive(partition, offsetManager.getOffset(partition));
+				Iterable<KafkaMessage> receive = kafkaTemplate.receive(partition, offsetManager.getOffset(partition), maxSize);
 				for (KafkaMessage message : receive) {
 					kafkaMessageListenerContainer.getMessageListener().onMessage(message);
 					offsetManager.updateOffset(partition, message.getNextOffset());

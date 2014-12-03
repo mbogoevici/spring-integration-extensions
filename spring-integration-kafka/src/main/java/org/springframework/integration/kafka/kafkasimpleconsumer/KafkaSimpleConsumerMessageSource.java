@@ -47,6 +47,8 @@ public class KafkaSimpleConsumerMessageSource extends IntegrationObjectSupport i
 
 	private long offset;
 
+	private int maxSize = 10000;
+
 	public KafkaSimpleConsumerMessageSource(KafkaBrokerAddress kafkaBrokerAddress, String topic, int partition, long startReferenceDate) {
 		this.partition = new Partition(topic, partition);
 		kafkaTemplate = new KafkaTemplate(new KafkaConfiguration(Collections.singletonList(kafkaBrokerAddress), Collections.singletonList(this.partition)));
@@ -61,9 +63,17 @@ public class KafkaSimpleConsumerMessageSource extends IntegrationObjectSupport i
 		this.clientId = clientId;
 	}
 
+	public int getMaxSize() {
+		return maxSize;
+	}
+
+	public void setMaxSize(int maxSize) {
+		this.maxSize = maxSize;
+	}
+
 	@Override
 	public Message<Map<String, Map<Integer, List<Object>>>> receive() {
-		Iterable<KafkaMessage> receivedMessages = kafkaTemplate.receive(partition, offset);
+		Iterable<KafkaMessage> receivedMessages = kafkaTemplate.receive(partition, offset, maxSize);
 
 		Map<String, Map<Integer, List<Object>>> responsePayload = new HashMap<String, Map<Integer, List<Object>>>();
 

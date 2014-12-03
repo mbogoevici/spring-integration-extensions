@@ -7,7 +7,7 @@
 
 	<int:channel id="input"/>
 
-	<bean id="kafkaSimpleConsumerMessageSource" class="org.springframework.integration.kafka.kafkasimpleconsumer.KafkaMessageListenerContainer">
+	<bean id="kafkaMessageListener" class="org.springframework.integration.kafka.kafkasimpleconsumer.KafkaMessageListenerContainer">
 		<constructor-arg index="0">
 			<bean class="org.springframework.integration.kafka.kafkasimpleconsumer.KafkaConfiguration">
 				<constructor-arg index="0">
@@ -44,7 +44,9 @@
 		<constructor-arg index="3" value="-2"/>
 		<property name="clientId" value="fluffy"/>
 		<property name="messageListener">
-			<bean class="org.springframework.integration.kafka.simpleconsumer.SimpleMessageListener"/>
+			<bean class="org.springframework.integration.kafka.simpleconsumer.ChannelSendingMessageListener">
+				<property name="channelName" value="input"/>
+			</bean>
 		</property>
 	</bean>
 

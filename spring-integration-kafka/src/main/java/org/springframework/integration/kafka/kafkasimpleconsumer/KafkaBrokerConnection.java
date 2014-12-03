@@ -92,24 +92,24 @@ public class KafkaBrokerConnection {
 		return brokerAddress;
 	}
 
-	public KafkaResult<MessageSet> fetch(FetchTarget fetchTarget) {
-		return fetch(Collections.singletonList(fetchTarget));
+	public KafkaResult<MessageSet> fetch(KafkaMessageFetchRequest kafkaMessageFetchRequest) {
+		return fetch(Collections.singletonList(kafkaMessageFetchRequest));
 	}
 
-	public KafkaResult<MessageSet> fetch(List<FetchTarget> fetchTargets) {
+	public KafkaResult<MessageSet> fetch(List<KafkaMessageFetchRequest> kafkaMessageFetchRequests) {
 		FetchRequestBuilder fetchRequestBuilder = new FetchRequestBuilder();
-		for (FetchTarget fetchTarget : fetchTargets) {
-			fetchRequestBuilder.addFetch(fetchTarget.getPartition().getTopic(), fetchTarget.getPartition().getNumber(), fetchTarget.getOffset(), this.simpleConsumer.bufferSize());
+		for (KafkaMessageFetchRequest kafkaMessageFetchRequest : kafkaMessageFetchRequests) {
+			fetchRequestBuilder.addFetch(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber(), kafkaMessageFetchRequest.getOffset(), this.simpleConsumer.bufferSize());
 		}
 		FetchResponse fetchResponse = this.simpleConsumer.fetch(fetchRequestBuilder.build());
 		KafkaResultBuilder<MessageSet> kafkaResultBuilder = new KafkaResultBuilder<MessageSet>();
-		for (FetchTarget fetchTarget : fetchTargets) {
-			short errorCode = fetchResponse.errorCode(fetchTarget.getPartition().getTopic(), fetchTarget.getPartition().getNumber());
+		for (KafkaMessageFetchRequest kafkaMessageFetchRequest : kafkaMessageFetchRequests) {
+			short errorCode = fetchResponse.errorCode(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber());
 			if (ErrorMapping.NoError() == errorCode) {
-				kafkaResultBuilder.add(fetchTarget.getPartition()).withResult(fetchResponse.messageSet(fetchTarget.getPartition().getTopic(), fetchTarget.getPartition().getNumber()));
+				kafkaResultBuilder.add(kafkaMessageFetchRequest.getPartition()).withResult(fetchResponse.messageSet(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber()));
 			}
 			else {
-				kafkaResultBuilder.add(fetchTarget.getPartition()).withError(fetchResponse.errorCode(fetchTarget.getPartition().getTopic(), fetchTarget.getPartition().getNumber()));
+				kafkaResultBuilder.add(kafkaMessageFetchRequest.getPartition()).withError(fetchResponse.errorCode(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber()));
 			}
 		}
 		return kafkaResultBuilder.build();

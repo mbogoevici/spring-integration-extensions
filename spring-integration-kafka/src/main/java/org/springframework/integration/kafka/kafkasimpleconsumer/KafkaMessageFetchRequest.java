@@ -20,15 +20,18 @@ package org.springframework.integration.kafka.kafkasimpleconsumer;
 /**
  * @author Marius Bogoevici
  */
-public class FetchTarget {
+public class KafkaMessageFetchRequest {
 
 	private Partition partition;
 
 	private long offset;
 
-	public FetchTarget(Partition Partition, long offset) {
+	private int maxSize;
+
+	public KafkaMessageFetchRequest(Partition Partition, long offset, int maxSize) {
 		this.partition = Partition;
 		this.offset = offset;
+		this.maxSize = maxSize;
 	}
 
 	public Partition getPartition() {
@@ -45,5 +48,13 @@ public class FetchTarget {
 
 	public void setOffset(long offset) {
 		this.offset = offset;
+	}
+
+	public int getMaxSize() {
+		return maxSize;
+	}
+
+	public void setMaxSize(int maxSize) {
+		this.maxSize = maxSize;
 	}
 }
