@@ -30,7 +30,10 @@
 		</constructor-arg>
 
 		<constructor-arg index="1">
-			<bean class="org.springframework.integration.metadata.SimpleMetadataStore"/>
+			<!--<bean class="org.springframework.integration.metadata.SimpleMetadataStore"/>-->
+			<bean class="org.springframework.integration.metadata.PropertiesPersistingMetadataStore">
+				<property name="baseDirectory" value="/Users/mbogoevici"/>
+			</bean>
 		</constructor-arg>
 		<constructor-arg index="2">
 			<bean class="org.springframework.integration.kafka.kafkasimpleconsumer.Partition">

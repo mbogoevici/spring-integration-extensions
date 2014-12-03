@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.integration.metadata.MetadataStore;
+import org.springframework.integration.metadata.PropertiesPersistingMetadataStore;
 
 /**
  * @author Marius Bogoevici
@@ -55,7 +56,7 @@ public class OffsetManager {
 
 
 	public void updateOffset(Partition partition, long offset) {
-		metadataStore.put(partition.toString(), Long.toString(offset));
+		metadataStore.put(asKey(partition), Long.toString(offset));
 		offsets.put(partition, offset);
 	}
 
