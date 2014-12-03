@@ -22,8 +22,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import kafka.common.TopicAndPartition;
-
 /**
  * @author Marius Bogoevici
  */
@@ -31,11 +29,11 @@ public class KafkaConfiguration {
 
 	private List<KafkaBrokerAddress> brokerAddresses;
 
-	private List<TopicAndPartition> topicAndPartitions;
+	private List<Partition> partitions;
 
-	public KafkaConfiguration(List<KafkaBrokerAddress> brokerAddresses, List<TopicAndPartition> topicAndPartitions) {
+	public KafkaConfiguration(List<KafkaBrokerAddress> brokerAddresses, List<Partition> Partitions) {
 		this.brokerAddresses = brokerAddresses;
-		this.topicAndPartitions = topicAndPartitions;
+		this.partitions = Partitions;
 	}
 
 	public List<KafkaBrokerAddress> getBrokerAddresses() {
@@ -46,20 +44,20 @@ public class KafkaConfiguration {
 		this.brokerAddresses = brokerAddresses;
 	}
 
-	public List<TopicAndPartition> getTopicAndPartitions() {
-		return topicAndPartitions;
+	public List<Partition> getPartitions() {
+		return partitions;
 	}
 
 	public List<String> getTopics() {
 		Set<String> topics = new LinkedHashSet<String>();
-		for (TopicAndPartition topicAndPartition : topicAndPartitions) {
-			topics.add(topicAndPartition.topic());
+		for (Partition partition : partitions) {
+			topics.add(partition.getTopic());
 		}
 		return new ArrayList<String>(topics);
 	}
 
-	public void setTopicAndPartitions(List<TopicAndPartition> topicAndPartitions) {
-		this.topicAndPartitions = topicAndPartitions;
+	public void setPartitions(List<Partition> partitions) {
+		this.partitions = partitions;
 	}
 
 }

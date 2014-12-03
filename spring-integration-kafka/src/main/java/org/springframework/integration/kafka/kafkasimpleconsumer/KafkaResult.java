@@ -20,28 +20,25 @@ package org.springframework.integration.kafka.kafkasimpleconsumer;
 import java.util.Collections;
 import java.util.Map;
 
-import kafka.common.TopicAndPartition;
-import kafka.javaapi.message.MessageSet;
-
 /**
  * @author Marius Bogoevici
  */
 public class KafkaResult<T> {
 
-	private Map<TopicAndPartition, T> result;
+	private Map<Partition, T> result;
 
-	private Map<TopicAndPartition, Short> errors;
+	private Map<Partition, Short> errors;
 
-	KafkaResult(Map<TopicAndPartition, T> result, Map<TopicAndPartition, Short> errors) {
+	KafkaResult(Map<Partition, T> result, Map<Partition, Short> errors) {
 		this.result = Collections.unmodifiableMap(result);
 		this.errors = Collections.unmodifiableMap(errors);
 	}
 
-	public Map<TopicAndPartition, T> getResult() {
+	public Map<Partition, T> getResult() {
 		return result;
 	}
 
-	public Map<TopicAndPartition, Short> getErrors() {
+	public Map<Partition, Short> getErrors() {
 		return errors;
 	}
 

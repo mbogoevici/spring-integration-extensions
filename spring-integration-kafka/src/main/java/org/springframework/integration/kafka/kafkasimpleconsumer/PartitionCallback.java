@@ -17,12 +17,10 @@
 
 package org.springframework.integration.kafka.kafkasimpleconsumer;
 
-import kafka.common.TopicAndPartition;
-
 /**
  * @author Marius Bogoevici
  */
 public interface PartitionCallback<T> {
 
-	T doInPartition(TopicAndPartition topicAndPartition);
+	T doInPartition(Partition partition);
 }

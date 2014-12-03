@@ -18,9 +18,7 @@
 package org.springframework.integration.kafka.kafkasimpleconsumer;
 
 import java.util.List;
-import java.util.Map;
 
-import kafka.common.TopicAndPartition;
 import kafka.javaapi.message.MessageSet;
 import kafka.message.Message;
 import kafka.message.MessageAndOffset;
@@ -49,19 +47,19 @@ public class KafkaTemplate {
 
 	}
 
-	public void send(TopicAndPartition topicAndPartition, Message message) {
+	public void send(Partition Partition, Message message) {
 
 	}
 
 	public void convertAndSend() {}
 
-	public Iterable<MessageAndOffset> receive(TopicAndPartition topicAndPartition, long offset) {
-		KafkaResult<MessageSet> fetch = kafkaResolver.resolveBroker(topicAndPartition).fetch(new FetchTarget(topicAndPartition, offset));
-		MessageSet messageSet = fetch.getResult().get(topicAndPartition);
+	public Iterable<MessageAndOffset> receive(Partition partition, long offset) {
+		KafkaResult<MessageSet> fetch = kafkaResolver.resolveBroker(partition).fetch(new FetchTarget(partition, offset));
+		MessageSet messageSet = fetch.getResult().get(partition);
 		return messageSet;
 	}
 
-	public <T> List<T> receiveAndConvert(TopicAndPartition topicAndPartition, long offset) {
+	public <T> List<T> receiveAndConvert(Partition partition, long offset) {
 		return null;
 	}
 

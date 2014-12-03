@@ -22,7 +22,6 @@ import java.util.List;
 
 import com.gs.collections.api.map.MutableMap;
 import com.gs.collections.impl.map.mutable.ConcurrentHashMap;
-import kafka.common.TopicAndPartition;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -41,31 +40,31 @@ public class OffsetManager {
 
 	private KafkaResolver kafkaResolver;
 
-	private MutableMap<TopicAndPartition, Long> offsets = new ConcurrentHashMap<TopicAndPartition, Long>();
+	private MutableMap<Partition, Long> offsets = new ConcurrentHashMap<Partition, Long>();
 
 	public OffsetManager(KafkaConfiguration kafkaConfiguration, KafkaResolver kafkaResolver, MetadataStore metadataStore) {
 		this.kafkaConfiguration = kafkaConfiguration;
 		this.metadataStore = metadataStore;
 		this.kafkaResolver = kafkaResolver;
-		this.offsets = new ConcurrentHashMap<TopicAndPartition, Long>();
+		this.offsets = new ConcurrentHashMap<Partition, Long>();
 		loadOffsets();
 	}
 
 
-	public void updateOffset(TopicAndPartition topicAndPartition, long offset) {
-		metadataStore.put(topicAndPartition.toString(), Long.toString(offset));
-		offsets.put(topicAndPartition, offset);
+	public void updateOffset(Partition Partition, long offset) {
+		metadataStore.put(Partition.toString(), Long.toString(offset));
+		offsets.put(Partition, offset);
 	}
 
-	public long getOffset(TopicAndPartition topicAndPartition) {
-		return Long.parseLong(metadataStore.get(topicAndPartition.toString()));
+	public long getOffset(Partition Partition) {
+		return Long.parseLong(metadataStore.get(Partition.toString()));
 	}
 
 	private void loadOffsets() {
 		KafkaBrokerConnection kafkaBrokerConnection = kafkaResolver.resolveAddress(kafkaConfiguration.getBrokerAddresses().get(0));
-		List<TopicAndPartition> partitionsRequiringInitialOffsets = new ArrayList<TopicAndPartition>();
-		for (TopicAndPartition topicAndPartition : kafkaConfiguration.getTopicAndPartitions()) {
-			String storedOffsetValueAsString = this.metadataStore.get(asKey(topicAndPartition));
+		List<Partition> partitionsRequiringInitialOffsets = new ArrayList<Partition>();
+		for (Partition Partition : kafkaConfiguration.getPartitions()) {
+			String storedOffsetValueAsString = this.metadataStore.get(asKey(Partition));
 			Long storedOffsetValue = null;
 			if (storedOffsetValueAsString != null) {
 				try {
@@ -76,14 +75,14 @@ public class OffsetManager {
 				}
 			}
 			if (storedOffsetValue != null) {
-				offsets.put(topicAndPartition, storedOffsetValue);
+				offsets.put(Partition, storedOffsetValue);
 			} else {
-				partitionsRequiringInitialOffsets.add(topicAndPartition);
+				partitionsRequiringInitialOffsets.add(Partition);
 			}
  		}
 		KafkaResult<Long> initialOffsets = kafkaBrokerConnection.fetchInitialOffset(partitionsRequiringInitialOffsets, 0);
 		if (initialOffsets.getErrors().size() == 0) {
-			for (TopicAndPartition partitionsRequiringInitialOffset : partitionsRequiringInitialOffsets) {
+			for (Partition partitionsRequiringInitialOffset : partitionsRequiringInitialOffsets) {
 				offsets.put(partitionsRequiringInitialOffset, initialOffsets.getResult().get(partitionsRequiringInitialOffset));
 			}
 		} else {
@@ -91,7 +90,7 @@ public class OffsetManager {
 		}
 	}
 
-	public String asKey(TopicAndPartition topicAndPartition) {
-		return topicAndPartition.partition() + " " + topicAndPartition.topic();
+	public String asKey(Partition partition) {
+		return partition.getNumber() + " " + partition.getTopic();
 	}
 }

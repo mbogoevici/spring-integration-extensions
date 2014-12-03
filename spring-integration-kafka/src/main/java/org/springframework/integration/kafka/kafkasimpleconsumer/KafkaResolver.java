@@ -25,8 +25,6 @@ import com.gs.collections.api.multimap.Multimap;
 import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.map.mutable.UnifiedMap;
 import com.gs.collections.impl.multimap.list.FastListMultimap;
-import kafka.common.TopicAndPartition;
-
 /**
  * @author Marius Bogoevici
  */
@@ -34,20 +32,20 @@ public class KafkaResolver {
 
 	public final KafkaBrokerInstantiator KAFKA_BROKER_INSTANTIATOR = new KafkaBrokerInstantiator();
 
-	public static final Function<TopicAndPartition, TopicAndPartition> IDENTITY = new Function<TopicAndPartition, TopicAndPartition>() {
+	public static final Function<Partition, Partition> IDENTITY = new Function<Partition, Partition>() {
 		@Override
-		public TopicAndPartition valueOf(TopicAndPartition object) {
+		public Partition valueOf(Partition object) {
 			return object;
 		}
 	};
 
 	private KafkaConfiguration configuration;
 
-	private Multimap<KafkaBrokerAddress, TopicAndPartition> topicsAndPartitionsByBroker = FastListMultimap.newMultimap();
+	private Multimap<KafkaBrokerAddress, Partition> topicsAndPartitionsByBroker = FastListMultimap.newMultimap();
 
 	private UnifiedMap<KafkaBrokerAddress, KafkaBrokerConnection> kafkaBrokersCache = UnifiedMap.newMap();
 
-	private UnifiedMap<TopicAndPartition, KafkaBrokerAddress> brokersByTopicAndPartition = UnifiedMap.newMap();
+	private UnifiedMap<Partition, KafkaBrokerAddress> brokersByPartition = UnifiedMap.newMap();
 
 	private KafkaBrokerConnection adminBroker;
 
@@ -64,11 +62,11 @@ public class KafkaResolver {
 	 * Resolves the broker associated with a specific topic and partition. Internally,
 	 * caches the {@link KafkaBrokerConnection}
 	 *
-	 * @param topicAndPartition
+	 * @param Partition
 	 * @return the broker associated with the provided topic and partition
 	 */
-	public KafkaBrokerConnection resolveBroker(TopicAndPartition topicAndPartition) {
-		KafkaBrokerAddress kafkaBrokerAddress = brokersByTopicAndPartition.get(topicAndPartition);
+	public KafkaBrokerConnection resolveBroker(Partition Partition) {
+		KafkaBrokerAddress kafkaBrokerAddress = brokersByPartition.get(Partition);
 		return resolveAddress(kafkaBrokerAddress);
 	}
 
@@ -80,16 +78,16 @@ public class KafkaResolver {
 	 * @param topicsAndPartitions
 	 * @return the broker associated with the provided topic and partition
 	 */
-	public Map<TopicAndPartition, KafkaBrokerConnection> resolveBrokers(final List<TopicAndPartition> topicsAndPartitions) {
-		return FastList.newList(topicsAndPartitions).toMap(IDENTITY, new Function<TopicAndPartition, KafkaBrokerConnection>() {
+	public Map<Partition, KafkaBrokerConnection> resolveBrokers(final List<Partition> topicsAndPartitions) {
+		return FastList.newList(topicsAndPartitions).toMap(IDENTITY, new Function<Partition, KafkaBrokerConnection>() {
 			@Override
-			public KafkaBrokerConnection valueOf(TopicAndPartition object) {
+			public KafkaBrokerConnection valueOf(Partition object) {
 				return resolveBroker(object);
 			}
 		});
 	}
 
-	public List<TopicAndPartition> resolveTopicsAndPartitions(KafkaBrokerAddress kafkaBrokerAddress) {
+	public List<Partition> resolveTopicsAndPartitions(KafkaBrokerAddress kafkaBrokerAddress) {
 		return topicsAndPartitionsByBroker.get(kafkaBrokerAddress).toList();
 	}
 
@@ -103,9 +101,9 @@ public class KafkaResolver {
 			KafkaResult<KafkaBrokerAddress> leaders = kafkaBrokerConnection.findLeaders(configuration.getTopics());
 			if (leaders.getErrors().size() == 0) {
 				this.adminBroker = kafkaBrokerConnection;
-				brokersByTopicAndPartition = UnifiedMap.newMap(leaders.getResult());
+				brokersByPartition = UnifiedMap.newMap(leaders.getResult());
 			}
-			topicsAndPartitionsByBroker = brokersByTopicAndPartition.flip();
+			topicsAndPartitionsByBroker = brokersByPartition.flip();
 		}
 	}
 

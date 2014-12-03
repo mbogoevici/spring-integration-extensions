@@ -20,51 +20,49 @@ package org.springframework.integration.kafka.kafkasimpleconsumer;
 import java.util.HashMap;
 import java.util.Map;
 
-import kafka.common.TopicAndPartition;
-
 /**
  * @author Marius Bogoevici
  */
 public class KafkaResultBuilder<T> {
 
-	private Map<TopicAndPartition, T> result;
+	private Map<Partition, T> result;
 
-	private Map<TopicAndPartition, Short> errors;
+	private Map<Partition, Short> errors;
 
 	public KafkaResultBuilder() {
-		this.result = new HashMap<TopicAndPartition, T>();
-		this.errors = new HashMap<TopicAndPartition, Short>();
+		this.result = new HashMap<Partition, T>();
+		this.errors = new HashMap<Partition, Short>();
 	}
 
-	public KafkaResultBuilderTopicAndPartition add(TopicAndPartition topicAndPartition) {
-		return new KafkaResultBuilderTopicAndPartition(topicAndPartition);
+	public KafkaResultBuilderPartition add(Partition Partition) {
+		return new KafkaResultBuilderPartition(Partition);
 	}
 
 	public KafkaResult<T> build() {
 		return new KafkaResult(result, errors);
 	}
 
-	public class KafkaResultBuilderTopicAndPartition<T1 extends T> {
+	public class KafkaResultBuilderPartition<T1 extends T> {
 
-		private TopicAndPartition topicAndPartition;
+		private Partition Partition;
 
-		public KafkaResultBuilderTopicAndPartition(TopicAndPartition topicAndPartition) {
-			this.topicAndPartition = topicAndPartition;
+		public KafkaResultBuilderPartition(Partition Partition) {
+			this.Partition = Partition;
 		}
 
 		public KafkaResultBuilder withResult(T1 result) {
-			if (KafkaResultBuilder.this.errors.containsKey(topicAndPartition)) {
+			if (KafkaResultBuilder.this.errors.containsKey(Partition)) {
 				throw new IllegalArgumentException("A KafkaResult cannot contain both an error and a result for the same topic and partition");
 			}
-			KafkaResultBuilder.this.result.put(topicAndPartition, result);
+			KafkaResultBuilder.this.result.put(Partition, result);
 			return KafkaResultBuilder.this;
 		}
 
 		public KafkaResultBuilder withError(short error) {
-			if (KafkaResultBuilder.this.result.containsKey(topicAndPartition)) {
+			if (KafkaResultBuilder.this.result.containsKey(Partition)) {
 				throw new IllegalArgumentException("A FetchResult cannot contain both an error and a MessageSet for the same topic and partition");
 			}
-			KafkaResultBuilder.this.errors.put(topicAndPartition, error);
+			KafkaResultBuilder.this.errors.put(Partition, error);
 			return KafkaResultBuilder.this;
 		}
 

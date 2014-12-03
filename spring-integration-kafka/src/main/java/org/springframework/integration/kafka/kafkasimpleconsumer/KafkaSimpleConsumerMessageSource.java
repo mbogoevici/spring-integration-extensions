@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import kafka.common.TopicAndPartition;
 import kafka.message.MessageAndOffset;
 import kafka.serializer.Decoder;
 
@@ -42,16 +41,16 @@ public class KafkaSimpleConsumerMessageSource extends IntegrationObjectSupport i
 
 	private final KafkaTemplate kafkaTemplate;
 
-	private final TopicAndPartition topicAndPartition;
+	private final Partition partition;
 
 	private final Decoder decoder = new StringDecoder();
 
 	private long offset;
 
 	public KafkaSimpleConsumerMessageSource(KafkaBrokerAddress kafkaBrokerAddress, String topic, int partition, long startReferenceDate) {
-		topicAndPartition = new TopicAndPartition(topic, partition);
-		kafkaTemplate = new KafkaTemplate(new KafkaConfiguration(Collections.singletonList(kafkaBrokerAddress), Collections.singletonList(topicAndPartition)));
-		offset = kafkaTemplate.getKafkaResolver().getAdminBroker().fetchInitialOffset(topicAndPartition, startReferenceDate).getResult().get(topicAndPartition);
+		this.partition = new Partition(topic, partition);
+		kafkaTemplate = new KafkaTemplate(new KafkaConfiguration(Collections.singletonList(kafkaBrokerAddress), Collections.singletonList(this.partition)));
+		offset = kafkaTemplate.getKafkaResolver().getAdminBroker().fetchInitialOffset(this.partition, startReferenceDate).getResult().get(this.partition);
 	}
 
 	public String getClientId() {
@@ -64,19 +63,19 @@ public class KafkaSimpleConsumerMessageSource extends IntegrationObjectSupport i
 
 	@Override
 	public Message<Map<String, Map<Integer, List<Object>>>> receive() {
-		Iterable<MessageAndOffset> receive = kafkaTemplate.receive(topicAndPartition, offset);
+		Iterable<MessageAndOffset> receive = kafkaTemplate.receive(partition, offset);
 
 		Map<String, Map<Integer, List<Object>>> responsePayload = new HashMap<String, Map<Integer, List<Object>>>();
 
 		HashMap<Integer, List<Object>> partitionContent = new HashMap<Integer, List<Object>>();
 
-		partitionContent.put(topicAndPartition.partition(), new ArrayList<Object>());
-		responsePayload.put(topicAndPartition.topic(), partitionContent);
+		partitionContent.put(partition.getNumber(), new ArrayList<Object>());
+		responsePayload.put(partition.getTopic(), partitionContent);
 
 		for (MessageAndOffset messageAndOffset : receive) {
 			byte[] dst = new byte[messageAndOffset.message().payloadSize()];
 			messageAndOffset.message().payload().get(dst);
-			responsePayload.get(topicAndPartition.topic()).get(topicAndPartition.partition()).add(decoder.fromBytes(dst));
+			responsePayload.get(partition.getTopic()).get(partition.getTopic()).add(decoder.fromBytes(dst));
 			offset = messageAndOffset.nextOffset();
 		}
 

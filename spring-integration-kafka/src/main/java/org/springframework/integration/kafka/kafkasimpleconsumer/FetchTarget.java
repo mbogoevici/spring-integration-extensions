@@ -17,28 +17,26 @@
 
 package org.springframework.integration.kafka.kafkasimpleconsumer;
 
-import kafka.common.TopicAndPartition;
-
 /**
  * @author Marius Bogoevici
  */
 public class FetchTarget {
 
-	private TopicAndPartition topicAndPartition;
+	private Partition partition;
 
 	private long offset;
 
-	public FetchTarget(TopicAndPartition topicAndPartition, long offset) {
-		this.topicAndPartition = topicAndPartition;
+	public FetchTarget(Partition Partition, long offset) {
+		this.partition = Partition;
 		this.offset = offset;
 	}
 
-	public TopicAndPartition getTopicAndPartition() {
-		return topicAndPartition;
+	public Partition getPartition() {
+		return partition;
 	}
 
-	public void setTopicAndPartition(TopicAndPartition topicAndPartition) {
-		this.topicAndPartition = topicAndPartition;
+	public void setPartition(Partition partition) {
+		this.partition = partition;
 	}
 
 	public long getOffset() {
