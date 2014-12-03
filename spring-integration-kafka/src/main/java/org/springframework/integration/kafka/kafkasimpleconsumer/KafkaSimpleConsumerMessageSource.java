@@ -63,7 +63,7 @@ public class KafkaSimpleConsumerMessageSource extends IntegrationObjectSupport i
 
 	@Override
 	public Message<Map<String, Map<Integer, List<Object>>>> receive() {
-		Iterable<MessageAndOffset> receive = kafkaTemplate.receive(partition, offset);
+		Iterable<KafkaMessage> receivedMessages = kafkaTemplate.receive(partition, offset);
 
 		Map<String, Map<Integer, List<Object>>> responsePayload = new HashMap<String, Map<Integer, List<Object>>>();
 
@@ -72,11 +72,11 @@ public class KafkaSimpleConsumerMessageSource extends IntegrationObjectSupport i
 		partitionContent.put(partition.getNumber(), new ArrayList<Object>());
 		responsePayload.put(partition.getTopic(), partitionContent);
 
-		for (MessageAndOffset messageAndOffset : receive) {
-			byte[] dst = new byte[messageAndOffset.message().payloadSize()];
-			messageAndOffset.message().payload().get(dst);
+		for (KafkaMessage message : receivedMessages) {
+			byte[] dst = new byte[message.getMessage().payloadSize()];
+			message.getMessage().payload().get(dst);
 			responsePayload.get(partition.getTopic()).get(partition.getTopic()).add(decoder.fromBytes(dst));
-			offset = messageAndOffset.nextOffset();
+			offset = message.getNextOffset();
 		}
 
 		return MessageBuilder.withPayload(responsePayload).build();

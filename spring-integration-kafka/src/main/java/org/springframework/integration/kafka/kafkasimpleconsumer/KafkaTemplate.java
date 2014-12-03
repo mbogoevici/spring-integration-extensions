@@ -19,6 +19,8 @@ package org.springframework.integration.kafka.kafkasimpleconsumer;
 
 import java.util.List;
 
+import com.gs.collections.api.block.function.Function;
+import com.gs.collections.impl.list.mutable.FastList;
 import kafka.javaapi.message.MessageSet;
 import kafka.message.Message;
 import kafka.message.MessageAndOffset;
@@ -53,10 +55,15 @@ public class KafkaTemplate {
 
 	public void convertAndSend() {}
 
-	public Iterable<MessageAndOffset> receive(Partition partition, long offset) {
+	public Iterable<KafkaMessage> receive(final Partition partition, long offset) {
 		KafkaResult<MessageSet> fetch = kafkaResolver.resolveBroker(partition).fetch(new FetchTarget(partition, offset));
 		MessageSet messageSet = fetch.getResult().get(partition);
-		return messageSet;
+		return FastList.newList(messageSet).collect(new Function<MessageAndOffset, KafkaMessage>() {
+			@Override
+			public KafkaMessage valueOf(MessageAndOffset object) {
+				return new KafkaMessage(object.message(), object.nextOffset(), partition);
+			}
+		});
 	}
 
 	public <T> List<T> receiveAndConvert(Partition partition, long offset) {
