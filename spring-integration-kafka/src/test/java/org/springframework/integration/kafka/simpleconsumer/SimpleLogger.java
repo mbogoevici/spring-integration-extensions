@@ -15,12 +15,16 @@
  */
 
 
-package org.springframework.integration.kafka.kafkasimpleconsumer;
+package org.springframework.integration.kafka.simpleconsumer;
+
+import org.springframework.messaging.Message;
 
 /**
  * @author Marius Bogoevici
  */
-public interface MessageListener {
+public class SimpleLogger {
 
-	void onMessage(KafkaMessage message);
+	public void log(Message<?> message) {
+		System.out.println(message.toString());
+	}
 }

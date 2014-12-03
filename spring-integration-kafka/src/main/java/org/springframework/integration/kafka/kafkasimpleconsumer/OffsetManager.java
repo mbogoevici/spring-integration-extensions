@@ -40,24 +40,27 @@ public class OffsetManager {
 
 	private KafkaResolver kafkaResolver;
 
+	private long referencePoint;
+
 	private MutableMap<Partition, Long> offsets = new ConcurrentHashMap<Partition, Long>();
 
-	public OffsetManager(KafkaConfiguration kafkaConfiguration, KafkaResolver kafkaResolver, MetadataStore metadataStore) {
+	public OffsetManager(KafkaConfiguration kafkaConfiguration, KafkaResolver kafkaResolver, MetadataStore metadataStore, long referencePoint) {
 		this.kafkaConfiguration = kafkaConfiguration;
 		this.metadataStore = metadataStore;
 		this.kafkaResolver = kafkaResolver;
+		this.referencePoint = referencePoint;
 		this.offsets = new ConcurrentHashMap<Partition, Long>();
 		loadOffsets();
 	}
 
 
-	public void updateOffset(Partition Partition, long offset) {
-		metadataStore.put(Partition.toString(), Long.toString(offset));
-		offsets.put(Partition, offset);
+	public void updateOffset(Partition partition, long offset) {
+		metadataStore.put(partition.toString(), Long.toString(offset));
+		offsets.put(partition, offset);
 	}
 
-	public long getOffset(Partition Partition) {
-		return Long.parseLong(metadataStore.get(Partition.toString()));
+	public long getOffset(Partition partition) {
+		return offsets.get(partition);
 	}
 
 	private void loadOffsets() {
@@ -80,13 +83,13 @@ public class OffsetManager {
 				partitionsRequiringInitialOffsets.add(Partition);
 			}
  		}
-		KafkaResult<Long> initialOffsets = kafkaBrokerConnection.fetchInitialOffset(partitionsRequiringInitialOffsets, 0);
+		KafkaResult<Long> initialOffsets = kafkaBrokerConnection.fetchInitialOffset(partitionsRequiringInitialOffsets, referencePoint);
 		if (initialOffsets.getErrors().size() == 0) {
 			for (Partition partitionsRequiringInitialOffset : partitionsRequiringInitialOffsets) {
 				offsets.put(partitionsRequiringInitialOffset, initialOffsets.getResult().get(partitionsRequiringInitialOffset));
 			}
 		} else {
-			// error handling
+			throw new IllegalStateException("Cannot load initial offsets");
 		}
 	}
 

@@ -59,4 +59,5 @@ public class KafkaMessage {
 	public void setPartition(Partition partition) {
 		this.partition = partition;
 	}
+
 }

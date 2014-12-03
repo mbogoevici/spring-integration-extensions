@@ -15,12 +15,20 @@
  */
 
 
-package org.springframework.integration.kafka.kafkasimpleconsumer;
+package org.springframework.integration.kafka.simpleconsumer;
+
+import org.springframework.integration.kafka.kafkasimpleconsumer.KafkaMessage;
+import org.springframework.integration.kafka.kafkasimpleconsumer.MessageListener;
 
 /**
  * @author Marius Bogoevici
  */
-public interface MessageListener {
+public class SimpleMessageListener implements MessageListener {
 
-	void onMessage(KafkaMessage message);
+	@Override
+	public void onMessage(KafkaMessage message) {
+		byte b[] = new byte[message.getMessage().payloadSize()];
+		message.getMessage().payload().get(b);
+		System.out.println("Received " + new String(b) + " from partition " + message.getPartition());
+	}
 }

@@ -15,16 +15,17 @@
  */
 
 
-package org.springframework.integration.kafka.support;
+package org.springframework.integration.kafka.simpleconsumer;
 
-import org.springframework.messaging.Message;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 /**
  * @author Marius Bogoevici
  */
-public class SimpleLogger {
+public class KafkaMessageListenerContainer {
 
-	public void log(Message<?> message) {
-		System.out.println(message.toString());
+	public static void main(String[] args) throws Exception{
+		new ClassPathXmlApplicationContext("kafka-messagelistener.xml").start();
+		System.in.read();
 	}
 }

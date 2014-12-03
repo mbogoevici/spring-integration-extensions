@@ -25,6 +25,6 @@
 	</int:inbound-channel-adapter>
 
 	<int:outbound-channel-adapter channel="input" method="log">
-		<bean class="org.springframework.integration.kafka.support.SimpleLogger"/>
+		<bean class="org.springframework.integration.kafka.simpleconsumer.SimpleLogger"/>
 	</int:outbound-channel-adapter>
 </beans>

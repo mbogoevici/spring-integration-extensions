@@ -21,6 +21,7 @@ import java.util.List;
 
 import com.gs.collections.api.block.function.Function;
 import com.gs.collections.impl.list.mutable.FastList;
+import kafka.common.ErrorMapping;
 import kafka.javaapi.message.MessageSet;
 import kafka.message.Message;
 import kafka.message.MessageAndOffset;
@@ -57,6 +58,9 @@ public class KafkaTemplate {
 
 	public Iterable<KafkaMessage> receive(final Partition partition, long offset) {
 		KafkaResult<MessageSet> fetch = kafkaResolver.resolveBroker(partition).fetch(new FetchTarget(partition, offset));
+		if (fetch.getErrors().size() > 0) {
+			throw new RuntimeException(ErrorMapping.exceptionFor(fetch.getErrors().values().iterator().next()));
+		}
 		MessageSet messageSet = fetch.getResult().get(partition);
 		return FastList.newList(messageSet).collect(new Function<MessageAndOffset, KafkaMessage>() {
 			@Override

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:int="http://www.springframework.org/schema/integration"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd">
+
+
+	<int:channel id="input"/>
+
+	<bean id="kafkaSimpleConsumerMessageSource" class="org.springframework.integration.kafka.kafkasimpleconsumer.KafkaMessageListenerContainer">
+		<constructor-arg index="0">
+			<bean class="org.springframework.integration.kafka.kafkasimpleconsumer.KafkaConfiguration">
+				<constructor-arg index="0">
+					<list>
+						<bean class="org.springframework.integration.kafka.kafkasimpleconsumer.KafkaBrokerAddress">
+							<constructor-arg index="0" value="localhost"/>
+							<constructor-arg index="1" value="9092"/>
+						</bean>
+					</list>
+				</constructor-arg>
+				<constructor-arg index="1">
+					<list>
+						<bean class="org.springframework.integration.kafka.kafkasimpleconsumer.Partition">
+							<constructor-arg index="0" value="kafka-source-test"/>
+							<constructor-arg index="1" value="0"/>
+						</bean>
+					</list>
+				</constructor-arg>
+			</bean>
+		</constructor-arg>
+
+		<constructor-arg index="1">
+			<bean class="org.springframework.integration.metadata.SimpleMetadataStore"/>
+		</constructor-arg>
+		<constructor-arg index="2">
+			<bean class="org.springframework.integration.kafka.kafkasimpleconsumer.Partition">
+				<constructor-arg index="0" value="kafka-source-test"/>
+				<constructor-arg index="1" value="0"/>
+			</bean>
+		</constructor-arg>
+		<constructor-arg index="3" value="-2"/>
+		<property name="clientId" value="fluffy"/>
+		<property name="messageListener">
+			<bean class="org.springframework.integration.kafka.simpleconsumer.SimpleMessageListener"/>
+		</property>
+	</bean>
+
+	<int:outbound-channel-adapter channel="input" method="log">
+		<bean class="org.springframework.integration.kafka.simpleconsumer.SimpleLogger"/>
+	</int:outbound-channel-adapter>
+</beans>

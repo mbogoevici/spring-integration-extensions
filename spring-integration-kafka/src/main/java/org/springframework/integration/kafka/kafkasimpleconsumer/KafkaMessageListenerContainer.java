@@ -18,13 +18,16 @@
 package org.springframework.integration.kafka.kafkasimpleconsumer;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.springframework.context.SmartLifecycle;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.integration.metadata.MetadataStore;
 
 /**
  * @author Marius Bogoevici
  */
-public class KafkaMessageListenerContainer {
+public class KafkaMessageListenerContainer implements SmartLifecycle{
 
 	private final KafkaTemplate kafkaTemplate;
 
@@ -32,11 +35,23 @@ public class KafkaMessageListenerContainer {
 
 	private MessageListener messageListener;
 
-	private Executor taskExecutor;
+	private Executor taskExecutor = new SimpleAsyncTaskExecutor();
 
-	public KafkaMessageListenerContainer(KafkaConfiguration kafkaConfiguration, MetadataStore metadataStore) {
+	private final AtomicBoolean running = new AtomicBoolean(false);
+
+	private final Partition partition;
+
+	private long referencePoint;
+
+	private long timeout = 1000L;
+
+	private String clientId;
+
+	public KafkaMessageListenerContainer(KafkaConfiguration kafkaConfiguration, MetadataStore metadataStore, Partition partition, long referencePoint) {
+		this.referencePoint = referencePoint;
 		this.kafkaTemplate = new KafkaTemplate(kafkaConfiguration);
-		this.offsetManager = new OffsetManager(kafkaConfiguration, kafkaTemplate.getKafkaResolver(), metadataStore);
+		this.offsetManager = new OffsetManager(kafkaConfiguration, kafkaTemplate.getKafkaResolver(), metadataStore, referencePoint);
+		this.partition  = partition;
 	}
 
 	public MessageListener getMessageListener() {
@@ -55,4 +70,68 @@ public class KafkaMessageListenerContainer {
 		this.taskExecutor = taskExecutor;
 	}
 
+
+	@Override
+	public boolean isAutoStartup() {
+		return false;
+	}
+
+	@Override
+	public void stop(Runnable callback) {
+		this.running.set(false);
+	}
+
+	@Override
+	public void start() {
+		this.running.set(true);
+		this.getTaskExecutor().execute(new FetchTask());
+	}
+
+	@Override
+	public void stop() {
+		this.running.set(false);
+	}
+
+	@Override
+	public boolean isRunning() {
+		return this.running.get();
+	}
+
+	@Override
+	public int getPhase() {
+		return 0;
+	}
+
+	public String getClientId() {
+		return clientId;
+	}
+
+	public void setClientId(String clientId) {
+		this.clientId = clientId;
+	}
+
+	public class FetchTask implements Runnable {
+		@Override
+		public void run() {
+			KafkaMessageListenerContainer kafkaMessageListenerContainer = KafkaMessageListenerContainer.this;
+			while(running.get()) {
+				Iterable<KafkaMessage> receive = kafkaTemplate.receive(partition, offsetManager.getOffset(partition));
+				for (KafkaMessage message : receive) {
+					kafkaMessageListenerContainer.getMessageListener().onMessage(message);
+					offsetManager.updateOffset(partition, message.getNextOffset());
+				}
+				try {
+					Thread.currentThread().sleep(timeout);
+				}
+				catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					if (!kafkaMessageListenerContainer.running.get()) {
+						// no longer running
+						return;
+					}
+					throw new IllegalStateException(e);
+				}
+			}
+		}
+	}
 }

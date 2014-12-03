@@ -66,4 +66,9 @@ public class Partition {
 		result = 31 * result + number;
 		return result;
 	}
+
+	@Override
+	public String toString() {
+		return "Partition[" + "topic='" + topic + '\'' + ", number=" + number + ']';
+	}
 }
