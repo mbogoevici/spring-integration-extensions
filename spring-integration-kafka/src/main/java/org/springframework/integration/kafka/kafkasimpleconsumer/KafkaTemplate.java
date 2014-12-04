@@ -70,7 +70,7 @@ public class KafkaTemplate {
 		return FastList.newList(messageSet).collect(new Function<MessageAndOffset, KafkaMessage>() {
 			@Override
 			public KafkaMessage valueOf(MessageAndOffset messageAndOffset) {
-				return new KafkaMessage(messageAndOffset.message(), messageAndOffset.nextOffset(), partition);
+				return new KafkaMessage(messageAndOffset.message(), messageAndOffset.offset(), messageAndOffset.nextOffset(), partition);
 			}
 		});
 	}

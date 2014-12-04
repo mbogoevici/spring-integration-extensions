@@ -26,12 +26,15 @@ public class KafkaMessage {
 
 	private Message message;
 
+	private long offset;
+
 	private long nextOffset;
 
 	private Partition partition;
 
-	public KafkaMessage(Message message, long nextOffset, Partition partition) {
+	public KafkaMessage(Message message, long offset, long nextOffset, Partition partition) {
 		this.message = message;
+		this.offset = offset;
 		this.nextOffset = nextOffset;
 		this.partition = partition;
 	}
@@ -42,6 +45,14 @@ public class KafkaMessage {
 
 	public void setMessage(Message message) {
 		this.message = message;
+	}
+
+	public long getOffset() {
+		return offset;
+	}
+
+	public void setOffset(long offset) {
+		this.offset = offset;
 	}
 
 	public long getNextOffset() {
