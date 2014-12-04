@@ -20,7 +20,7 @@ package org.springframework.integration.kafka.kafkasimpleconsumer;
 /**
  * @author Marius Bogoevici
  */
-public interface PartitionCallback<T> {
+public interface BrokerCallback<T> {
 
-	T doInPartition(Partition partition);
+	T doInBrokerConnection(KafkaBrokerConnection kafkaBrokerConnection);
 }
