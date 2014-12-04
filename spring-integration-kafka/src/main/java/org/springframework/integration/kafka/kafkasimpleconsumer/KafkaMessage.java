@@ -30,12 +30,15 @@ public class KafkaMessage {
 
 	private long nextOffset;
 
+	private long highWaterMark;
+
 	private Partition partition;
 
-	public KafkaMessage(Message message, long offset, long nextOffset, Partition partition) {
+	public KafkaMessage(Message message, long offset, long nextOffset, long highWaterMark, Partition partition) {
 		this.message = message;
 		this.offset = offset;
 		this.nextOffset = nextOffset;
+		this.highWaterMark = highWaterMark;
 		this.partition = partition;
 	}
 
@@ -57,6 +60,14 @@ public class KafkaMessage {
 
 	public long getNextOffset() {
 		return nextOffset;
+	}
+
+	public long getHighWaterMark() {
+		return highWaterMark;
+	}
+
+	public void setHighWaterMark(long highWaterMark) {
+		this.highWaterMark = highWaterMark;
 	}
 
 	public void setNextOffset(long nextOffset) {

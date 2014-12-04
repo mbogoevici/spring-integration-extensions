@@ -17,8 +17,16 @@
 
 package org.springframework.integration.kafka.kafkasimpleconsumer;
 
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.gs.collections.impl.factory.Maps;
+import com.gs.collections.impl.map.mutable.UnifiedMap;
 
 import org.springframework.context.SmartLifecycle;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
@@ -43,11 +51,13 @@ public class KafkaMessageListenerContainer implements SmartLifecycle{
 
 	private long referencePoint;
 
-	private long timeout = 1000L;
+	private long timeout = 100L;
 
 	private String clientId;
 
 	private int maxSize = 10000;
+
+	private ConcurrentMap<Partition, Long> highWatermarks = new ConcurrentHashMap<Partition, Long>();
 
 	public KafkaMessageListenerContainer(KafkaConfiguration kafkaConfiguration, MetadataStore metadataStore, Partition partition, long referencePoint) {
 		this.referencePoint = referencePoint;
@@ -87,6 +97,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle{
 	public void start() {
 		this.running.set(true);
 		this.getTaskExecutor().execute(new FetchTask());
+		this.highWatermarks.putIfAbsent(partition, Long.MAX_VALUE);
 	}
 
 	@Override
@@ -120,16 +131,36 @@ public class KafkaMessageListenerContainer implements SmartLifecycle{
 		this.maxSize = maxSize;
 	}
 
+	public long getTimeout() {
+		return timeout;
+	}
+
+	public void setTimeout(long timeout) {
+		this.timeout = timeout;
+	}
+
 	public class FetchTask implements Runnable {
 		@Override
 		public void run() {
 			KafkaMessageListenerContainer kafkaMessageListenerContainer = KafkaMessageListenerContainer.this;
 			while(running.get()) {
-				Iterable<KafkaMessage> receive = kafkaTemplate.receive(new KafkaMessageFetchRequest(partition, offsetManager.getOffset(partition), maxSize));
-				for (KafkaMessage message : receive) {
-					kafkaMessageListenerContainer.getMessageListener().onMessage(message);
-					offsetManager.updateOffset(new Offset(partition, message.getNextOffset()));
-				}
+				Set<Partition> partitionsWithData = new HashSet<Partition>();
+				do {
+					partitionsWithData.add(partition);
+					Iterable<KafkaMessage> receive = kafkaTemplate.receive(new KafkaMessageFetchRequest(partition, offsetManager.getOffset(partition), maxSize));
+					boolean hasData = false;
+					for (KafkaMessage message : receive) {
+						kafkaMessageListenerContainer.getMessageListener().onMessage(message);
+						offsetManager.updateOffset(new Offset(partition, message.getNextOffset()));
+						if (message.getHighWaterMark() == message.getNextOffset()) {
+							partitionsWithData.remove(partition);
+						}
+						hasData = true;
+					}
+					if (!hasData) {
+						partitionsWithData.remove(partition);
+					}
+				} while (!partitionsWithData.isEmpty());
 				try {
 					Thread.currentThread().sleep(timeout);
 				}

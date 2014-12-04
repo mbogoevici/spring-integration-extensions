@@ -43,7 +43,6 @@ import kafka.javaapi.TopicMetadata;
 import kafka.javaapi.TopicMetadataRequest;
 import kafka.javaapi.TopicMetadataResponse;
 import kafka.javaapi.consumer.SimpleConsumer;
-import kafka.javaapi.message.MessageSet;
 
 import org.springframework.util.Assert;
 
@@ -54,7 +53,7 @@ public class KafkaBrokerConnection {
 
 	public static final String DEFAULT_CLIENT_ID = "spring.integration.kafka";
 
-	public static final int DEFAULT_BUFFER_SIZE = 64 * 1024;
+	public static final int DEFAULT_BUFFER_SIZE = 400000000;
 
 	public static final int DEFAULT_SOCKET_TIMEOUT = 10000;
 
@@ -69,7 +68,7 @@ public class KafkaBrokerConnection {
 	}
 
 	public KafkaBrokerConnection(KafkaBrokerAddress brokerAddress, String clientId) {
-		this(brokerAddress, clientId, DEFAULT_SOCKET_TIMEOUT, DEFAULT_BUFFER_SIZE);
+		this(brokerAddress, clientId,DEFAULT_BUFFER_SIZE,DEFAULT_SOCKET_TIMEOUT);
 	}
 
 	public KafkaBrokerConnection(KafkaBrokerAddress brokerAddress, String clientId, int bufferSize, int soTimeout) {
@@ -81,17 +80,18 @@ public class KafkaBrokerConnection {
 		return brokerAddress;
 	}
 
-	public KafkaResult<MessageSet> fetch(KafkaMessageFetchRequest... kafkaMessageFetchRequests) {
+	public KafkaResult<KafkaMessageSet> fetch(KafkaMessageFetchRequest... kafkaMessageFetchRequests) {
 		FetchRequestBuilder fetchRequestBuilder = new FetchRequestBuilder();
 		for (KafkaMessageFetchRequest kafkaMessageFetchRequest : kafkaMessageFetchRequests) {
-			fetchRequestBuilder.addFetch(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber(), kafkaMessageFetchRequest.getOffset(), this.simpleConsumer.bufferSize());
+			fetchRequestBuilder.addFetch(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber(), kafkaMessageFetchRequest.getOffset(), kafkaMessageFetchRequest.getMaxSize());
 		}
 		FetchResponse fetchResponse = this.simpleConsumer.fetch(fetchRequestBuilder.build());
-		KafkaResultBuilder<MessageSet> kafkaResultBuilder = new KafkaResultBuilder<MessageSet>();
+		KafkaResultBuilder<KafkaMessageSet> kafkaResultBuilder = new KafkaResultBuilder<KafkaMessageSet>();
 		for (KafkaMessageFetchRequest kafkaMessageFetchRequest : kafkaMessageFetchRequests) {
+			System.out.println("Reading from " + kafkaMessageFetchRequest.getPartition() + "@" + kafkaMessageFetchRequest.getOffset());
 			short errorCode = fetchResponse.errorCode(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber());
 			if (ErrorMapping.NoError() == errorCode) {
-				kafkaResultBuilder.add(kafkaMessageFetchRequest.getPartition()).withResult(fetchResponse.messageSet(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber()));
+				kafkaResultBuilder.add(kafkaMessageFetchRequest.getPartition()).withResult(new KafkaMessageSet(fetchResponse.messageSet(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber()),fetchResponse.highWatermark(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber())));
 			}
 			else {
 				kafkaResultBuilder.add(kafkaMessageFetchRequest.getPartition()).withError(fetchResponse.errorCode(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber()));

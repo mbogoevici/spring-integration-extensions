@@ -18,18 +18,14 @@
 package org.springframework.integration.kafka.kafkasimpleconsumer;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import com.gs.collections.api.LazyIterable;
 import com.gs.collections.api.block.function.Function;
 import com.gs.collections.api.list.MutableList;
-import com.gs.collections.impl.factory.Lists;
 import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.utility.ArrayIterate;
 import com.gs.collections.impl.utility.LazyIterate;
-import kafka.javaapi.message.MessageSet;
 import kafka.message.MessageAndOffset;
 
 
@@ -75,18 +71,18 @@ public class KafkaTemplate {
 		if (distinctBrokerAddresses.size() != 1) {
 			throw new IllegalArgumentException("All messages must be fetched from the same broker");
 		}
-		KafkaResult<MessageSet> fetch = kafkaResolver.resolveAddress(distinctBrokerAddresses.get(0)).fetch(messageFetchRequests);
+		KafkaResult<KafkaMessageSet> fetch = kafkaResolver.resolveAddress(distinctBrokerAddresses.get(0)).fetch(messageFetchRequests);
 		if (fetch.getErrors().size() > 0) {
 			// synchronously refresh on error
 			kafkaResolver.refresh();
 		}
-		return FastList.newList(fetch.getResult().entrySet()).flatCollect(new Function<Map.Entry<Partition, MessageSet>, Iterable<KafkaMessage>>() {
+		return FastList.newList(fetch.getResult().entrySet()).flatCollect(new Function<Map.Entry<Partition, KafkaMessageSet>, Iterable<KafkaMessage>>() {
 			@Override
-			public Iterable<KafkaMessage> valueOf(final Map.Entry<Partition, MessageSet> mapEntry) {
-				return LazyIterate.collect(mapEntry.getValue(), new Function<MessageAndOffset, KafkaMessage>() {
+			public Iterable<KafkaMessage> valueOf(final Map.Entry<Partition, KafkaMessageSet> mapEntry) {
+				return LazyIterate.collect(mapEntry.getValue().getMessageSet(), new Function<MessageAndOffset, KafkaMessage>() {
 					@Override
 					public KafkaMessage valueOf(MessageAndOffset object) {
-						return new KafkaMessage(object.message(), object.offset(), object.nextOffset(), mapEntry.getKey());
+						return new KafkaMessage(object.message(), object.offset(), object.nextOffset(), mapEntry.getValue().getHighWatermark(), mapEntry.getKey());
 					}
 				});
 			}
