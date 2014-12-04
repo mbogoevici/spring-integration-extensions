@@ -125,7 +125,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle{
 		public void run() {
 			KafkaMessageListenerContainer kafkaMessageListenerContainer = KafkaMessageListenerContainer.this;
 			while(running.get()) {
-				Iterable<KafkaMessage> receive = kafkaTemplate.receive(partition, offsetManager.getOffset(partition), maxSize);
+				Iterable<KafkaMessage> receive = kafkaTemplate.receive(new KafkaMessageFetchRequest(partition, offsetManager.getOffset(partition), maxSize));
 				for (KafkaMessage message : receive) {
 					kafkaMessageListenerContainer.getMessageListener().onMessage(message);
 					offsetManager.updateOffset(new Offset(partition, message.getNextOffset()));

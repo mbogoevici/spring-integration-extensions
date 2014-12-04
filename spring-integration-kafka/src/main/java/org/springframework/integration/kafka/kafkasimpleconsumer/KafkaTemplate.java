@@ -18,14 +18,20 @@
 package org.springframework.integration.kafka.kafkasimpleconsumer;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
+import com.gs.collections.api.LazyIterable;
 import com.gs.collections.api.block.function.Function;
+import com.gs.collections.api.list.MutableList;
+import com.gs.collections.impl.factory.Lists;
 import com.gs.collections.impl.list.mutable.FastList;
-import kafka.common.ErrorMapping;
+import com.gs.collections.impl.utility.ArrayIterate;
+import com.gs.collections.impl.utility.LazyIterate;
 import kafka.javaapi.message.MessageSet;
-import kafka.message.Message;
 import kafka.message.MessageAndOffset;
+
 
 
 /**
@@ -39,7 +45,7 @@ public class KafkaTemplate {
 
 	public KafkaTemplate(KafkaConfiguration kafkaConfiguration) {
 		this.kafkaConfiguration = kafkaConfiguration;
-		this.kafkaResolver = new KafkaResolver(kafkaConfiguration.getBrokerAddresses());
+		this.kafkaResolver = new KafkaResolver(kafkaConfiguration.getBrokerAddresses(), kafkaConfiguration.getPartitions().toArray(new Partition[kafkaConfiguration.getPartitions().size()]));
 	}
 
 	public List<KafkaBrokerConnection> getAllBrokers() {
@@ -50,33 +56,41 @@ public class KafkaTemplate {
 		return kafkaResolver;
 	}
 
-	public void exec() {
-
-	}
-
-	public void send(Partition Partition, Message message) {
-
-	}
-
-	public void convertAndSend() {
-	}
-
-	public Iterable<KafkaMessage> receive(final Partition partition, long offset, int maxSize) {
-		KafkaResult<MessageSet> fetch = kafkaResolver.resolveBroker(partition).fetch(new KafkaMessageFetchRequest(partition, offset, maxSize));
-		if (fetch.getErrors().size() > 0) {
-			throw new RuntimeException(ErrorMapping.exceptionFor(fetch.getErrors().values().iterator().next()));
-		}
-		MessageSet messageSet = fetch.getResult().get(partition);
-		return FastList.newList(messageSet).collect(new Function<MessageAndOffset, KafkaMessage>() {
+	public List<KafkaMessage> receive(KafkaBrokerAddress kafkaBrokerAddress, final Map<Partition, Offset> offsets, final int maxSize) {
+		return this.receive(FastList.newList(kafkaResolver.resolvePartitions(kafkaBrokerAddress)).collect(new Function<Partition, KafkaMessageFetchRequest>() {
 			@Override
-			public KafkaMessage valueOf(MessageAndOffset messageAndOffset) {
-				return new KafkaMessage(messageAndOffset.message(), messageAndOffset.offset(), messageAndOffset.nextOffset(), partition);
+			public KafkaMessageFetchRequest valueOf(Partition partition) {
+				return new KafkaMessageFetchRequest(partition, offsets.get(partition).getOffset(), maxSize);
+			}
+		}).toTypedArray(KafkaMessageFetchRequest.class));
+	}
+
+	public List<KafkaMessage> receive(KafkaMessageFetchRequest... messageFetchRequests) {
+		MutableList<KafkaBrokerAddress> distinctBrokerAddresses = ArrayIterate.collect(messageFetchRequests, new Function<KafkaMessageFetchRequest, KafkaBrokerAddress>() {
+			@Override
+			public KafkaBrokerAddress valueOf(KafkaMessageFetchRequest fetchRequest) {
+				return kafkaResolver.resolveBroker(fetchRequest.getPartition()).getBrokerAddress();
+			}
+		}).distinct();
+		if (distinctBrokerAddresses.size() != 1) {
+			throw new IllegalArgumentException("All messages must be fetched from the same broker");
+		}
+		KafkaResult<MessageSet> fetch = kafkaResolver.resolveAddress(distinctBrokerAddresses.get(0)).fetch(messageFetchRequests);
+		if (fetch.getErrors().size() > 0) {
+			// synchronously refresh on error
+			kafkaResolver.refresh();
+		}
+		return FastList.newList(fetch.getResult().entrySet()).flatCollect(new Function<Map.Entry<Partition, MessageSet>, Iterable<KafkaMessage>>() {
+			@Override
+			public Iterable<KafkaMessage> valueOf(final Map.Entry<Partition, MessageSet> mapEntry) {
+				return LazyIterate.collect(mapEntry.getValue(), new Function<MessageAndOffset, KafkaMessage>() {
+					@Override
+					public KafkaMessage valueOf(MessageAndOffset object) {
+						return new KafkaMessage(object.message(), object.offset(), object.nextOffset(), mapEntry.getKey());
+					}
+				});
 			}
 		});
-	}
-
-	public <T> List<T> receiveAndConvert(Partition partition, long offset) {
-		return null;
 	}
 
 }

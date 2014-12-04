@@ -73,7 +73,7 @@ public class KafkaSimpleConsumerMessageSource extends IntegrationObjectSupport i
 
 	@Override
 	public Message<Map<String, Map<Integer, List<Object>>>> receive() {
-		Iterable<KafkaMessage> receivedMessages = kafkaTemplate.receive(partition, offset, maxSize);
+		Iterable<KafkaMessage> receivedMessages = kafkaTemplate.receive(new KafkaMessageFetchRequest(partition, offset, maxSize));
 
 		Map<String, Map<Integer, List<Object>>> responsePayload = new HashMap<String, Map<Integer, List<Object>>>();
 

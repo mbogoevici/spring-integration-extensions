@@ -17,10 +17,28 @@
 
 package org.springframework.integration.kafka.kafkasimpleconsumer;
 
+import com.gs.collections.api.multimap.Multimap;
+import com.gs.collections.impl.map.mutable.UnifiedMap;
+
 /**
  * @author Marius Bogoevici
  */
-public interface BrokerCallback<T> {
+public class PartitionBrokerTable {
 
-	T doInBrokerConnection(KafkaBrokerConnection kafkaBrokerConnection);
+	private Multimap<KafkaBrokerAddress, Partition> partitionsByBroker;
+
+	private UnifiedMap<Partition, KafkaBrokerAddress> brokersByPartition;
+
+	public PartitionBrokerTable(UnifiedMap<Partition, KafkaBrokerAddress> brokersByPartition) {
+		this.brokersByPartition = brokersByPartition;
+		this.partitionsByBroker = brokersByPartition.flip();
+	}
+
+	public Multimap<KafkaBrokerAddress, Partition> getPartitionsByBroker() {
+		return partitionsByBroker;
+	}
+
+	public UnifiedMap<Partition, KafkaBrokerAddress> getBrokersByPartition() {
+		return brokersByPartition;
+	}
 }
