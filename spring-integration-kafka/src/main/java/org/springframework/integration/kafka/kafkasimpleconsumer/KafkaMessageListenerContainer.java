@@ -128,7 +128,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle{
 				Iterable<KafkaMessage> receive = kafkaTemplate.receive(partition, offsetManager.getOffset(partition), maxSize);
 				for (KafkaMessage message : receive) {
 					kafkaMessageListenerContainer.getMessageListener().onMessage(message);
-					offsetManager.updateOffset(partition, message.getNextOffset());
+					offsetManager.updateOffset(new Offset(partition, message.getNextOffset()));
 				}
 				try {
 					Thread.currentThread().sleep(timeout);

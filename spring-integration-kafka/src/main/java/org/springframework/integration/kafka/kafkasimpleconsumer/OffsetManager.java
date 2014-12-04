@@ -55,9 +55,9 @@ public class OffsetManager {
 	}
 
 
-	public void updateOffset(Partition partition, long offset) {
-		metadataStore.put(asKey(partition), Long.toString(offset));
-		offsets.put(partition, offset);
+	public void updateOffset(Offset offset) {
+		metadataStore.put(asKey(offset.getPartition()), Long.toString(offset.getOffset()));
+		offsets.put(offset.getPartition(), offset.getOffset());
 	}
 
 	public long getOffset(Partition partition) {
@@ -84,13 +84,15 @@ public class OffsetManager {
 				partitionsRequiringInitialOffsets.add(Partition);
 			}
  		}
-		KafkaResult<Long> initialOffsets = kafkaBrokerConnection.fetchInitialOffset(partitionsRequiringInitialOffsets, referencePoint);
-		if (initialOffsets.getErrors().size() == 0) {
-			for (Partition partitionsRequiringInitialOffset : partitionsRequiringInitialOffsets) {
-				offsets.put(partitionsRequiringInitialOffset, initialOffsets.getResult().get(partitionsRequiringInitialOffset));
+		if (partitionsRequiringInitialOffsets.size() > 0) {
+			KafkaResult<Long> initialOffsets = kafkaBrokerConnection.fetchInitialOffset(referencePoint, partitionsRequiringInitialOffsets.toArray(new Partition[partitionsRequiringInitialOffsets.size()]));
+			if (initialOffsets.getErrors().size() == 0) {
+				for (Partition partitionsRequiringInitialOffset : partitionsRequiringInitialOffsets) {
+					offsets.put(partitionsRequiringInitialOffset, initialOffsets.getResult().get(partitionsRequiringInitialOffset));
+				}
+			} else {
+				throw new IllegalStateException("Cannot load initial offsets");
 			}
-		} else {
-			throw new IllegalStateException("Cannot load initial offsets");
 		}
 	}
 

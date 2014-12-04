@@ -39,7 +39,7 @@ public class KafkaTemplate {
 
 	public KafkaTemplate(KafkaConfiguration kafkaConfiguration) {
 		this.kafkaConfiguration = kafkaConfiguration;
-		this.kafkaResolver = new KafkaResolver(kafkaConfiguration);
+		this.kafkaResolver = new KafkaResolver(kafkaConfiguration.getBrokerAddresses());
 	}
 
 	public List<KafkaBrokerConnection> getAllBrokers() {
@@ -69,8 +69,8 @@ public class KafkaTemplate {
 		MessageSet messageSet = fetch.getResult().get(partition);
 		return FastList.newList(messageSet).collect(new Function<MessageAndOffset, KafkaMessage>() {
 			@Override
-			public KafkaMessage valueOf(MessageAndOffset object) {
-				return new KafkaMessage(object.message(), object.nextOffset(), partition);
+			public KafkaMessage valueOf(MessageAndOffset messageAndOffset) {
+				return new KafkaMessage(messageAndOffset.message(), messageAndOffset.nextOffset(), partition);
 			}
 		});
 	}

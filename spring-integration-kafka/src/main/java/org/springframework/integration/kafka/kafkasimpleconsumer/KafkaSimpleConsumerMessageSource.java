@@ -52,7 +52,7 @@ public class KafkaSimpleConsumerMessageSource extends IntegrationObjectSupport i
 	public KafkaSimpleConsumerMessageSource(KafkaBrokerAddress kafkaBrokerAddress, String topic, int partition, long startReferenceDate) {
 		this.partition = new Partition(topic, partition);
 		kafkaTemplate = new KafkaTemplate(new KafkaConfiguration(Collections.singletonList(kafkaBrokerAddress), Collections.singletonList(this.partition)));
-		offset = kafkaTemplate.getKafkaResolver().getAdminBroker().fetchInitialOffset(this.partition, startReferenceDate).getResult().get(this.partition);
+		offset = kafkaTemplate.getKafkaResolver().getAdminBroker().fetchInitialOffset(startReferenceDate, this.partition).getResult().get(this.partition);
 	}
 
 	public String getClientId() {

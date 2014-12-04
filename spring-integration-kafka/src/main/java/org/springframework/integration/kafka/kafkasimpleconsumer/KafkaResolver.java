@@ -22,6 +22,7 @@ import java.util.Map;
 
 import com.gs.collections.api.block.function.Function;
 import com.gs.collections.api.multimap.Multimap;
+import com.gs.collections.impl.block.factory.Functions;
 import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.map.mutable.UnifiedMap;
 import com.gs.collections.impl.multimap.list.FastListMultimap;
@@ -32,14 +33,8 @@ public class KafkaResolver {
 
 	public final KafkaBrokerInstantiator KAFKA_BROKER_INSTANTIATOR = new KafkaBrokerInstantiator();
 
-	public static final Function<Partition, Partition> IDENTITY = new Function<Partition, Partition>() {
-		@Override
-		public Partition valueOf(Partition object) {
-			return object;
-		}
-	};
 
-	private KafkaConfiguration configuration;
+	private List<KafkaBrokerAddress> kafkaBrokerAddresses;
 
 	private Multimap<KafkaBrokerAddress, Partition> topicsAndPartitionsByBroker = FastListMultimap.newMultimap();
 
@@ -49,8 +44,8 @@ public class KafkaResolver {
 
 	private KafkaBrokerConnection adminBroker;
 
-	public KafkaResolver(KafkaConfiguration configuration) {
-		this.configuration = configuration;
+	public KafkaResolver(List<KafkaBrokerAddress> kafkaBrokerAddresses) {
+		this.kafkaBrokerAddresses = FastList.newList(kafkaBrokerAddresses);
 		refresh();
 	}
 
@@ -79,10 +74,10 @@ public class KafkaResolver {
 	 * @return the broker associated with the provided topic and partition
 	 */
 	public Map<Partition, KafkaBrokerConnection> resolveBrokers(final List<Partition> topicsAndPartitions) {
-		return FastList.newList(topicsAndPartitions).toMap(IDENTITY, new Function<Partition, KafkaBrokerConnection>() {
+		return FastList.newList(topicsAndPartitions).toMap(Functions.<Partition>getPassThru(), new Function<Partition, KafkaBrokerConnection>() {
 			@Override
-			public KafkaBrokerConnection valueOf(Partition object) {
-				return resolveBroker(object);
+			public KafkaBrokerConnection valueOf(Partition partition) {
+				return resolveBroker(partition);
 			}
 		});
 	}
@@ -95,10 +90,22 @@ public class KafkaResolver {
 		return kafkaBrokersCache.getIfAbsentPutWith(kafkaBrokerAddress, KAFKA_BROKER_INSTANTIATOR, kafkaBrokerAddress);
 	}
 
-	public void refresh() {
-		for (KafkaBrokerAddress kafkaBrokerAddress : configuration.getBrokerAddresses()) {
+	public void refresh(String ... topics) {
+		for (KafkaBrokerAddress kafkaBrokerAddress : kafkaBrokerAddresses) {
 			KafkaBrokerConnection kafkaBrokerConnection = new KafkaBrokerConnection(kafkaBrokerAddress);
-			KafkaResult<KafkaBrokerAddress> leaders = kafkaBrokerConnection.findLeaders(configuration.getTopics());
+			KafkaResult<KafkaBrokerAddress> leaders = kafkaBrokerConnection.findLeaders(topics);
+			if (leaders.getErrors().size() == 0) {
+				this.adminBroker = kafkaBrokerConnection;
+				brokersByPartition = UnifiedMap.newMap(leaders.getResult());
+			}
+			topicsAndPartitionsByBroker = brokersByPartition.flip();
+		}
+	}
+
+	public void refresh(boolean clear, String... topics) {
+		for (KafkaBrokerAddress kafkaBrokerAddress : kafkaBrokerAddresses) {
+			KafkaBrokerConnection kafkaBrokerConnection = new KafkaBrokerConnection(kafkaBrokerAddress);
+			KafkaResult<KafkaBrokerAddress> leaders = kafkaBrokerConnection.findLeaders(topics);
 			if (leaders.getErrors().size() == 0) {
 				this.adminBroker = kafkaBrokerConnection;
 				brokersByPartition = UnifiedMap.newMap(leaders.getResult());

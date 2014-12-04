@@ -18,6 +18,7 @@
 package org.springframework.integration.kafka.kafkasimpleconsumer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -47,6 +48,8 @@ import kafka.javaapi.TopicMetadataResponse;
 import kafka.javaapi.consumer.SimpleConsumer;
 import kafka.javaapi.message.MessageSet;
 
+import org.springframework.util.Assert;
+
 /**
  * @author Marius Bogoevici
  */
@@ -61,14 +64,7 @@ public class KafkaBrokerConnection {
 	public static final short KAFKA_CONSUMER_VERSION = kafka.api.OffsetRequest.CurrentVersion();
 
 	public static final int MAX_NUM_OFFSETS = 1;
-
-	public static final Function<Partition, TopicAndPartition> AS_KAFKA_TOPIC_AND_PARTITION = new Function<Partition, TopicAndPartition>() {
-		@Override
-		public TopicAndPartition valueOf(Partition object) {
-			return new TopicAndPartition(object.getTopic(), object.getNumber());
-		}
-	};
-
+	
 	private final SimpleConsumer simpleConsumer;
 
 	private final static AtomicInteger correlationIdCounter = new AtomicInteger(new Random(new Date().getTime()).nextInt());
@@ -92,11 +88,7 @@ public class KafkaBrokerConnection {
 		return brokerAddress;
 	}
 
-	public KafkaResult<MessageSet> fetch(KafkaMessageFetchRequest kafkaMessageFetchRequest) {
-		return fetch(Collections.singletonList(kafkaMessageFetchRequest));
-	}
-
-	public KafkaResult<MessageSet> fetch(List<KafkaMessageFetchRequest> kafkaMessageFetchRequests) {
+	public KafkaResult<MessageSet> fetch(KafkaMessageFetchRequest... kafkaMessageFetchRequests) {
 		FetchRequestBuilder fetchRequestBuilder = new FetchRequestBuilder();
 		for (KafkaMessageFetchRequest kafkaMessageFetchRequest : kafkaMessageFetchRequests) {
 			fetchRequestBuilder.addFetch(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber(), kafkaMessageFetchRequest.getOffset(), this.simpleConsumer.bufferSize());
@@ -115,12 +107,13 @@ public class KafkaBrokerConnection {
 		return kafkaResultBuilder.build();
 	}
 
-	public KafkaResult<Long> fetchOffsetforConsumer(Partition partition) {
-		return fetchOffsetForConsumer(Collections.singletonList(partition));
-	}
-
-	public KafkaResult<Long> fetchOffsetForConsumer(List<Partition> partitions) {
-		FastList<TopicAndPartition> topicsAndPartitions = FastList.newList(partitions).collect(AS_KAFKA_TOPIC_AND_PARTITION);
+	public KafkaResult<Long> fetchOffsetsForConsumer(Partition... partitions) {
+		FastList<TopicAndPartition> topicsAndPartitions = FastList.newList(Arrays.asList(partitions)).collect(new Function<Partition, TopicAndPartition>() {
+			@Override
+			public TopicAndPartition valueOf(Partition partition) {
+				return new TopicAndPartition(partition.getTopic(), partition.getNumber());
+			}
+		});
 		OffsetFetchRequest offsetFetchRequest = new OffsetFetchRequest(simpleConsumer.clientId(), topicsAndPartitions, KAFKA_CONSUMER_VERSION, createCorrelationId(), simpleConsumer.clientId());
 		OffsetFetchResponse offsetFetchResponse = simpleConsumer.fetchOffsets(offsetFetchRequest);
 		KafkaResultBuilder<Long> kafkaResultBuilder = new KafkaResultBuilder<Long>();
@@ -137,14 +130,11 @@ public class KafkaBrokerConnection {
 		return kafkaResultBuilder.build();
 	}
 
-	public KafkaResult<Long> fetchInitialOffset(Partition Partition, long time) {
-		return fetchInitialOffset(Collections.singletonList(Partition), time);
-	}
-
-	public KafkaResult<Long> fetchInitialOffset(List<Partition> topicsAndPartitions, long time) {
+	public KafkaResult<Long> fetchInitialOffset(long referenceTime, Partition... topicsAndPartitions) {
+		Assert.isTrue(topicsAndPartitions.length > 0, "Must provide at least one partition");
 		Map<TopicAndPartition, PartitionOffsetRequestInfo> infoMap = new HashMap<TopicAndPartition, PartitionOffsetRequestInfo>();
 		for (Partition partition: topicsAndPartitions) {
-			infoMap.put(AS_KAFKA_TOPIC_AND_PARTITION.valueOf(partition), new PartitionOffsetRequestInfo(time, 1));
+			infoMap.put(new TopicAndPartition(partition.getTopic(), partition.getNumber()), new PartitionOffsetRequestInfo(referenceTime, 1));
 		}
 		OffsetRequest offsetRequest = new OffsetRequest(infoMap, KAFKA_CONSUMER_VERSION, simpleConsumer.clientId());
 		OffsetResponse offsetResponse = simpleConsumer.getOffsetsBefore(offsetRequest);
@@ -165,37 +155,27 @@ public class KafkaBrokerConnection {
 		return kafkaResultBuilder.build();
 	}
 
-	public KafkaResult<Long> commitOffset(Partition Partition, long offset) {
-		return commitOffsets(Collections.singletonMap(Partition, offset));
-	}
-
-	public KafkaResult<Long> commitOffsets(Map<Partition, Long> newOffsets) {
+	public KafkaResult<Void> commitOffsets(Offset... offsets) {
 		Map<TopicAndPartition, OffsetMetadataAndError> requestInfo = new HashMap<TopicAndPartition, OffsetMetadataAndError>();
-		for (Map.Entry<Partition, Long> newOffsetEntry : newOffsets.entrySet()) {
+		for (Offset offset : offsets) {
+			Partition partition = offset.getPartition();
 			requestInfo.put(
-					AS_KAFKA_TOPIC_AND_PARTITION.valueOf(newOffsetEntry.getKey()),
-					new OffsetMetadataAndError(newOffsetEntry.getValue(), OffsetMetadataAndError.NoMetadata(), ErrorMapping.NoError()));
+					new TopicAndPartition(partition.getTopic(), partition.getNumber()),
+					new OffsetMetadataAndError(offset.getOffset(), OffsetMetadataAndError.NoMetadata(), ErrorMapping.NoError()));
 		}
 		OffsetCommitResponse offsetCommitResponse = simpleConsumer.commitOffsets(
 				new OffsetCommitRequest(simpleConsumer.clientId(), requestInfo, KAFKA_CONSUMER_VERSION, createCorrelationId(), simpleConsumer.clientId()));
-		KafkaResultBuilder<Long> kafkaResultBuilder = new KafkaResultBuilder<Long>();
-		for (Partition Partition : newOffsets.keySet()) {
-			if (offsetCommitResponse.errors().containsKey(Partition)) {
-				kafkaResultBuilder.add(Partition).withError((Short) offsetCommitResponse.errors().get(Partition));
-			}
-			else {
-				kafkaResultBuilder.add(Partition).withResult(newOffsets.get(Partition));
+		KafkaResultBuilder<Void> kafkaResultBuilder = new KafkaResultBuilder<Void>();
+		for (TopicAndPartition topicAndPartition : requestInfo.keySet()) {
+			if (offsetCommitResponse.errors().containsKey(topicAndPartition)) {
+				kafkaResultBuilder.add(new Partition(topicAndPartition.topic(), topicAndPartition.partition())).withError((Short) offsetCommitResponse.errors().get(topicAndPartition));
 			}
 		}
 		return kafkaResultBuilder.build();
 	}
 
-	public KafkaResult<KafkaBrokerAddress> findLeader(String topic) {
-		return findLeaders(Collections.singletonList(topic));
-	}
-
-	public KafkaResult<KafkaBrokerAddress> findLeaders(List<String> topics) {
-		TopicMetadataRequest topicMetadataRequest = new TopicMetadataRequest(new ArrayList<String>(topics), createCorrelationId());
+	public KafkaResult<KafkaBrokerAddress> findLeaders(String... topics) {
+		TopicMetadataRequest topicMetadataRequest = new TopicMetadataRequest(Arrays.asList(topics), createCorrelationId());
 		TopicMetadataResponse topicMetadataResponse = simpleConsumer.send(topicMetadataRequest);
 		KafkaResultBuilder<KafkaBrokerAddress> kafkaResultBuilder = new KafkaResultBuilder<KafkaBrokerAddress>();
 		for (TopicMetadata topicMetadata : topicMetadataResponse.topicsMetadata()) {
