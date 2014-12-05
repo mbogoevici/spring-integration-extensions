@@ -80,18 +80,18 @@ public class KafkaBrokerConnection {
 		return brokerAddress;
 	}
 
-	public KafkaResult<KafkaMessageSet> fetch(KafkaMessageFetchRequest... kafkaMessageFetchRequests) {
+	public KafkaResult<KafkaMessageBatch> fetch(KafkaMessageFetchRequest... kafkaMessageFetchRequests) {
 		FetchRequestBuilder fetchRequestBuilder = new FetchRequestBuilder();
 		for (KafkaMessageFetchRequest kafkaMessageFetchRequest : kafkaMessageFetchRequests) {
 			fetchRequestBuilder.addFetch(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber(), kafkaMessageFetchRequest.getOffset(), kafkaMessageFetchRequest.getMaxSize());
 		}
 		FetchResponse fetchResponse = this.simpleConsumer.fetch(fetchRequestBuilder.build());
-		KafkaResultBuilder<KafkaMessageSet> kafkaResultBuilder = new KafkaResultBuilder<KafkaMessageSet>();
+		KafkaResultBuilder<KafkaMessageBatch> kafkaResultBuilder = new KafkaResultBuilder<KafkaMessageBatch>();
 		for (KafkaMessageFetchRequest kafkaMessageFetchRequest : kafkaMessageFetchRequests) {
 			System.out.println("Reading from " + kafkaMessageFetchRequest.getPartition() + "@" + kafkaMessageFetchRequest.getOffset());
 			short errorCode = fetchResponse.errorCode(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber());
 			if (ErrorMapping.NoError() == errorCode) {
-				kafkaResultBuilder.add(kafkaMessageFetchRequest.getPartition()).withResult(new KafkaMessageSet(fetchResponse.messageSet(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber()),fetchResponse.highWatermark(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber())));
+				kafkaResultBuilder.add(kafkaMessageFetchRequest.getPartition()).withResult(new KafkaMessageBatch(kafkaMessageFetchRequest.getPartition(), fetchResponse.messageSet(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber()),fetchResponse.highWatermark(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber())));
 			}
 			else {
 				kafkaResultBuilder.add(kafkaMessageFetchRequest.getPartition()).withError(fetchResponse.errorCode(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber()));

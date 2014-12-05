@@ -31,7 +31,7 @@ import org.springframework.integration.metadata.MetadataStore;
 /**
  * @author Marius Bogoevici
  */
-public class KafkaMessageListenerContainer implements SmartLifecycle{
+public class KafkaMessageListenerContainer implements SmartLifecycle {
 
 	private final KafkaTemplate kafkaTemplate;
 
@@ -52,8 +52,6 @@ public class KafkaMessageListenerContainer implements SmartLifecycle{
 	private String clientId;
 
 	private int maxSize = 10000;
-
-	private ConcurrentMap<Partition, Long> highWatermarks = new ConcurrentHashMap<Partition, Long>();
 
 	public KafkaMessageListenerContainer(KafkaConfiguration kafkaConfiguration, MetadataStore metadataStore, Partition partition, long referencePoint) {
 		this.referencePoint = referencePoint;
@@ -93,7 +91,6 @@ public class KafkaMessageListenerContainer implements SmartLifecycle{
 	public void start() {
 		this.running.set(true);
 		this.getTaskExecutor().execute(new FetchTask());
-		this.highWatermarks.putIfAbsent(partition, Long.MAX_VALUE);
 	}
 
 	@Override

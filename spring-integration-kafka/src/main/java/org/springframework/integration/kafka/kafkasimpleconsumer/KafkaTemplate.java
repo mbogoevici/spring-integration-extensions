@@ -71,14 +71,14 @@ public class KafkaTemplate {
 		if (distinctBrokerAddresses.size() != 1) {
 			throw new IllegalArgumentException("All messages must be fetched from the same broker");
 		}
-		KafkaResult<KafkaMessageSet> fetch = kafkaResolver.resolveAddress(distinctBrokerAddresses.get(0)).fetch(messageFetchRequests);
+		KafkaResult<KafkaMessageBatch> fetch = kafkaResolver.resolveAddress(distinctBrokerAddresses.get(0)).fetch(messageFetchRequests);
 		if (fetch.getErrors().size() > 0) {
 			// synchronously refresh on error
 			kafkaResolver.refresh();
 		}
-		return FastList.newList(fetch.getResult().entrySet()).flatCollect(new Function<Map.Entry<Partition, KafkaMessageSet>, Iterable<KafkaMessage>>() {
+		return FastList.newList(fetch.getResult().entrySet()).flatCollect(new Function<Map.Entry<Partition, KafkaMessageBatch>, Iterable<KafkaMessage>>() {
 			@Override
-			public Iterable<KafkaMessage> valueOf(final Map.Entry<Partition, KafkaMessageSet> mapEntry) {
+			public Iterable<KafkaMessage> valueOf(final Map.Entry<Partition, KafkaMessageBatch> mapEntry) {
 				return LazyIterate.collect(mapEntry.getValue().getMessageSet(), new Function<MessageAndOffset, KafkaMessage>() {
 					@Override
 					public KafkaMessage valueOf(MessageAndOffset object) {

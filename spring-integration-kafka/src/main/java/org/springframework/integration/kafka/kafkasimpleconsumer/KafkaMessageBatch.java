@@ -22,15 +22,26 @@ import kafka.javaapi.message.MessageSet;
 /**
  * @author Marius Bogoevici
  */
-public class KafkaMessageSet {
+public class KafkaMessageBatch {
+
+	private Partition partition;
 
 	private MessageSet messageSet;
 
 	private long highWatermark;
 
-	public KafkaMessageSet(MessageSet messageSet, long highWatermark) {
+	public KafkaMessageBatch(Partition partition, MessageSet messageSet, long highWatermark) {
+		this.partition = partition;
 		this.messageSet = messageSet;
 		this.highWatermark = highWatermark;
+	}
+
+	public Partition getPartition() {
+		return partition;
+	}
+
+	public void setPartition(Partition partition) {
+		this.partition = partition;
 	}
 
 	public MessageSet getMessageSet() {
