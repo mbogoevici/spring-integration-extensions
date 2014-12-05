@@ -18,15 +18,11 @@
 package org.springframework.integration.kafka.kafkasimpleconsumer;
 
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.gs.collections.impl.factory.Maps;
-import com.gs.collections.impl.map.mutable.UnifiedMap;
 
 import org.springframework.context.SmartLifecycle;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;

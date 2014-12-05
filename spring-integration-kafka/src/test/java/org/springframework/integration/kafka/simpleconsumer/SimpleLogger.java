@@ -25,6 +25,6 @@ import org.springframework.messaging.Message;
 public class SimpleLogger {
 
 	public void log(Message<?> message) {
-		System.out.println(message.toString());
+		//System.out.println(message.toString());
 	}
 }

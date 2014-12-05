@@ -36,6 +36,8 @@ public class ChannelSendingMessageListener implements MessageListener, Applicati
 
 	private String channelName;
 
+	private MessageChannel messageChannel;
+
 	public String getChannelName() {
 		return channelName;
 	}
@@ -49,13 +51,14 @@ public class ChannelSendingMessageListener implements MessageListener, Applicati
 	@Override
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
 		this.destinationResolver = new BeanFactoryChannelResolver(applicationContext);
+		messageChannel = destinationResolver.resolveDestination(channelName);
 	}
 
 	@Override
 	public void onMessage(KafkaMessage message) {
-		byte b[] = new byte[message.getMessage().payloadSize()];
-		message.getMessage().payload().get(b);
-		destinationResolver.resolveDestination(channelName).send(MessageBuilder.withPayload(new String(b)).build());
+		//byte b[] = new byte[message.getMessage().payloadSize()];
+		//message.getMessage().payload().get(b);
+		//messageChannel.send(MessageBuilder.withPayload(new String(b)).build());
 		//System.out.println("Received " + new String(b) + " from partition " + message.getPartition());
 	}
 }
