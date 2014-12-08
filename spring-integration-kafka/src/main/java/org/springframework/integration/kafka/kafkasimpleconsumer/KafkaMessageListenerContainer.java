@@ -19,9 +19,8 @@ package org.springframework.integration.kafka.kafkasimpleconsumer;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.springframework.context.SmartLifecycle;
@@ -39,11 +38,14 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 
 	private MessageListener messageListener;
 
-	private Executor taskExecutor = new SimpleAsyncTaskExecutor();
+	private Executor consumerTaskExecutor = Executors.newSingleThreadExecutor();
+
+	private Executor processorTaskExecutor = Executors.newSingleThreadExecutor();
 
 	private final AtomicBoolean running = new AtomicBoolean(false);
 
 	private final Partition partition;
+
 
 	private long referencePoint;
 
@@ -52,6 +54,8 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	private String clientId;
 
 	private int maxSize = 10000;
+
+	private BlockingQueueMessageProcessor messageProcessor;
 
 	public KafkaMessageListenerContainer(KafkaConfiguration kafkaConfiguration, MetadataStore metadataStore, Partition partition, long referencePoint) {
 		this.referencePoint = referencePoint;
@@ -69,11 +73,11 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	}
 
 	public Executor getTaskExecutor() {
-		return taskExecutor;
+		return consumerTaskExecutor;
 	}
 
 	public void setTaskExecutor(Executor taskExecutor) {
-		this.taskExecutor = taskExecutor;
+		this.consumerTaskExecutor = taskExecutor;
 	}
 
 
@@ -90,7 +94,11 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	@Override
 	public void start() {
 		this.running.set(true);
-		this.getTaskExecutor().execute(new FetchTask());
+		this.consumerTaskExecutor.execute(new FetchTask());
+		messageProcessor = new BlockingQueueMessageProcessor(10, offsetManager);
+		messageProcessor.setMessageListener(messageListener);
+		messageProcessor.start();
+		this.processorTaskExecutor.execute(messageProcessor);
 	}
 
 	@Override
@@ -143,8 +151,17 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 					Iterable<KafkaMessage> receive = kafkaTemplate.receive(new KafkaMessageFetchRequest(partition, offsetManager.getOffset(partition), maxSize));
 					boolean hasData = false;
 					for (KafkaMessage message : receive) {
-						kafkaMessageListenerContainer.getMessageListener().onMessage(message);
-						offsetManager.updateOffset(new Offset(partition, message.getNextOffset()));
+						try {
+							messageProcessor.processMessage(message);
+						}
+						catch (InterruptedException e) {
+							Thread.currentThread().interrupt();
+							if (!kafkaMessageListenerContainer.running.get()) {
+								// no longer running
+								return;
+							}
+							throw new IllegalStateException(e);
+						}
 						if (message.getHighWaterMark() == message.getNextOffset()) {
 							partitionsWithData.remove(partition);
 						}

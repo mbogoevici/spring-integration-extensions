@@ -28,6 +28,8 @@ import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.map.mutable.UnifiedMap;
 import com.gs.collections.impl.multimap.list.FastListMultimap;
 
+import org.springframework.util.ObjectUtils;
+
 /**
  * @author Marius Bogoevici
  */
