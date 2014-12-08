@@ -7,12 +7,12 @@
 
 	<int:channel id="input"/>
 
-	<bean id="kafkaMessageListener" class="org.springframework.integration.kafka.kafkasimpleconsumer.KafkaMessageListenerContainer">
+	<bean id="kafkaMessageListener" class="org.springframework.integration.kafka.simple.listener.KafkaMessageListenerContainer">
 		<constructor-arg index="0">
-			<bean class="org.springframework.integration.kafka.kafkasimpleconsumer.KafkaConfiguration">
+			<bean class="org.springframework.integration.kafka.simple.consumer.KafkaConfiguration">
 				<constructor-arg index="0">
 					<list>
-						<bean class="org.springframework.integration.kafka.kafkasimpleconsumer.KafkaBrokerAddress">
+						<bean class="org.springframework.integration.kafka.simple.model.KafkaBrokerAddress">
 							<constructor-arg index="0" value="localhost"/>
 							<constructor-arg index="1" value="9092"/>
 						</bean>
@@ -20,7 +20,7 @@
 				</constructor-arg>
 				<constructor-arg index="1">
 					<list>
-						<bean class="org.springframework.integration.kafka.kafkasimpleconsumer.Partition">
+						<bean class="org.springframework.integration.kafka.simple.model.Partition">
 							<constructor-arg index="0" value="kafka-source-test"/>
 							<constructor-arg index="1" value="0"/>
 						</bean>
@@ -36,7 +36,7 @@
 			<!--</bean>-->
 		</constructor-arg>
 		<constructor-arg index="2">
-			<bean class="org.springframework.integration.kafka.kafkasimpleconsumer.Partition">
+			<bean class="org.springframework.integration.kafka.simple.model.Partition">
 				<constructor-arg index="0" value="kafka-source-test"/>
 				<constructor-arg index="1" value="0"/>
 			</bean>

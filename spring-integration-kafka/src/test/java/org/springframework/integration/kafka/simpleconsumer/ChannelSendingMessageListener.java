@@ -18,12 +18,10 @@
 package org.springframework.integration.kafka.simpleconsumer;
 
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.integration.kafka.kafkasimpleconsumer.KafkaMessage;
-import org.springframework.integration.kafka.kafkasimpleconsumer.MessageListener;
+import org.springframework.integration.kafka.simple.model.KafkaMessage;
+import org.springframework.integration.kafka.simple.listener.MessageListener;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.integration.support.channel.BeanFactoryChannelResolver;
 import org.springframework.messaging.MessageChannel;
@@ -56,9 +54,9 @@ public class ChannelSendingMessageListener implements MessageListener, Applicati
 
 	@Override
 	public void onMessage(KafkaMessage message) {
-		//byte b[] = new byte[message.getMessage().payloadSize()];
-		//message.getMessage().payload().get(b);
-		//messageChannel.send(MessageBuilder.withPayload(new String(b)).build());
-		//System.out.println("Received " + new String(b) + " from partition " + message.getPartition());
+		byte b[] = new byte[message.getMessage().payloadSize()];
+		message.getMessage().payload().get(b);
+		messageChannel.send(MessageBuilder.withPayload(new String(b)).build());
+		System.out.println("Received " + new String(b) + " from partition " + message.getPartition());
 	}
 }

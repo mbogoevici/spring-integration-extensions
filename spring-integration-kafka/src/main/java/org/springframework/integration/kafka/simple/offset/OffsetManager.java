@@ -15,7 +15,7 @@
  */
 
 
-package org.springframework.integration.kafka.kafkasimpleconsumer;
+package org.springframework.integration.kafka.simple.offset;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,8 +25,13 @@ import com.gs.collections.impl.map.mutable.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
+import org.springframework.integration.kafka.simple.consumer.KafkaConfiguration;
+import org.springframework.integration.kafka.simple.connection.KafkaResolver;
+import org.springframework.integration.kafka.simple.connection.KafkaResult;
+import org.springframework.integration.kafka.simple.model.Offset;
+import org.springframework.integration.kafka.simple.model.Partition;
 import org.springframework.integration.metadata.MetadataStore;
-import org.springframework.integration.metadata.PropertiesPersistingMetadataStore;
 
 /**
  * @author Marius Bogoevici

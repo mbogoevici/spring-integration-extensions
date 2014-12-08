@@ -15,13 +15,16 @@
  */
 
 
-package org.springframework.integration.kafka.kafkasimpleconsumer;
+package org.springframework.integration.kafka.simple.listener;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.springframework.context.Lifecycle;
+import org.springframework.integration.kafka.simple.model.KafkaMessage;
+import org.springframework.integration.kafka.simple.model.Offset;
+import org.springframework.integration.kafka.simple.offset.OffsetManager;
 
 /**
  * @author Marius Bogoevici

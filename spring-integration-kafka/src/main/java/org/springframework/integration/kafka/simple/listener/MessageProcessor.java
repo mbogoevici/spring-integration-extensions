@@ -15,31 +15,14 @@
  */
 
 
-package org.springframework.integration.kafka.kafkasimpleconsumer;
+package org.springframework.integration.kafka.simple.listener;
 
-import java.util.Collections;
-import java.util.Map;
+import org.springframework.integration.kafka.simple.model.KafkaMessage;
 
 /**
  * @author Marius Bogoevici
  */
-public class KafkaResult<T> {
+public interface MessageProcessor {
 
-	private Map<Partition, T> result;
-
-	private Map<Partition, Short> errors;
-
-	KafkaResult(Map<Partition, T> result, Map<Partition, Short> errors) {
-		this.result = Collections.unmodifiableMap(result);
-		this.errors = Collections.unmodifiableMap(errors);
-	}
-
-	public Map<Partition, T> getResult() {
-		return result;
-	}
-
-	public Map<Partition, Short> getErrors() {
-		return errors;
-	}
-
+	void processMessage(KafkaMessage message) throws InterruptedException;
 }

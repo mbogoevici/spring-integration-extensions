@@ -15,10 +15,13 @@
  */
 
 
-package org.springframework.integration.kafka.kafkasimpleconsumer;
+package org.springframework.integration.kafka.simple.connection;
 
 import com.gs.collections.api.multimap.Multimap;
 import com.gs.collections.impl.map.mutable.UnifiedMap;
+
+import org.springframework.integration.kafka.simple.model.KafkaBrokerAddress;
+import org.springframework.integration.kafka.simple.model.Partition;
 
 /**
  * @author Marius Bogoevici

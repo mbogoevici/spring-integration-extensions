@@ -15,12 +15,15 @@
  */
 
 
-package org.springframework.integration.kafka.kafkasimpleconsumer;
+package org.springframework.integration.kafka.simple.consumer;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.springframework.integration.kafka.simple.model.KafkaBrokerAddress;
+import org.springframework.integration.kafka.simple.model.Partition;
 
 /**
  * @author Marius Bogoevici

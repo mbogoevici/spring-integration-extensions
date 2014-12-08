@@ -15,20 +15,19 @@
  */
 
 
-package org.springframework.integration.kafka.kafkasimpleconsumer;
+package org.springframework.integration.kafka.simple.connection;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.gs.collections.api.block.function.Function;
-import com.gs.collections.api.multimap.Multimap;
 import com.gs.collections.impl.block.factory.Functions;
 import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.map.mutable.UnifiedMap;
-import com.gs.collections.impl.multimap.list.FastListMultimap;
 
-import org.springframework.util.ObjectUtils;
+import org.springframework.integration.kafka.simple.model.KafkaBrokerAddress;
+import org.springframework.integration.kafka.simple.model.Partition;
 
 /**
  * @author Marius Bogoevici

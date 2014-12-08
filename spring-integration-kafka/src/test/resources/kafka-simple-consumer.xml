@@ -7,9 +7,9 @@
 
 	<int:channel id="input"/>
 
-	<bean id="kafkaSimpleConsumerMessageSource" class="org.springframework.integration.kafka.kafkasimpleconsumer.KafkaSimpleConsumerMessageSource">
+	<bean id="kafkaSimpleConsumerMessageSource" class="org.springframework.integration.kafka.simple.integration.KafkaSimpleConsumerMessageSource">
 		<constructor-arg index="0">
-			<bean class="org.springframework.integration.kafka.kafkasimpleconsumer.KafkaBrokerAddress">
+			<bean class="org.springframework.integration.kafka.simple.model.KafkaBrokerAddress">
 				<constructor-arg index="0" value="localhost"/>
 				<constructor-arg index="1" value="9092"/>
 			</bean>

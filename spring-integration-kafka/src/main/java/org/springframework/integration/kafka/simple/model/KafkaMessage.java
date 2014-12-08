@@ -15,7 +15,7 @@
  */
 
 
-package org.springframework.integration.kafka.kafkasimpleconsumer;
+package org.springframework.integration.kafka.simple.model;
 
 import kafka.message.Message;
 

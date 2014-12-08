@@ -15,7 +15,9 @@
  */
 
 
-package org.springframework.integration.kafka.kafkasimpleconsumer;
+package org.springframework.integration.kafka.simple.listener;
+
+import org.springframework.integration.kafka.simple.model.KafkaMessage;
 
 /**
  * @author Marius Bogoevici

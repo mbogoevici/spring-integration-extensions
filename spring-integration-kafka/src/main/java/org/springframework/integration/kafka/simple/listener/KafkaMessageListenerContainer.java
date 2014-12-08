@@ -15,7 +15,7 @@
  */
 
 
-package org.springframework.integration.kafka.kafkasimpleconsumer;
+package org.springframework.integration.kafka.simple.listener;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -24,7 +24,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.springframework.context.SmartLifecycle;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.integration.kafka.simple.consumer.KafkaConfiguration;
+import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
+import org.springframework.integration.kafka.simple.consumer.KafkaTemplate;
+import org.springframework.integration.kafka.simple.offset.OffsetManager;
+import org.springframework.integration.kafka.simple.model.Partition;
+import org.springframework.integration.kafka.simple.model.KafkaMessage;
 import org.springframework.integration.metadata.MetadataStore;
 
 /**
