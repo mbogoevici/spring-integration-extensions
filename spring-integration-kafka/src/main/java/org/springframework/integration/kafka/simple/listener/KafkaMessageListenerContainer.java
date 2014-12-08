@@ -27,9 +27,10 @@ import org.springframework.context.SmartLifecycle;
 import org.springframework.integration.kafka.simple.consumer.KafkaConfiguration;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
 import org.springframework.integration.kafka.simple.consumer.KafkaTemplate;
-import org.springframework.integration.kafka.simple.offset.OffsetManager;
+import org.springframework.integration.kafka.simple.offset.ConsumerIdMetadataStoreOffsetManager;
 import org.springframework.integration.kafka.simple.model.Partition;
 import org.springframework.integration.kafka.simple.model.KafkaMessage;
+import org.springframework.integration.kafka.simple.offset.OffsetManager;
 import org.springframework.integration.metadata.MetadataStore;
 
 /**
@@ -65,7 +66,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	public KafkaMessageListenerContainer(KafkaConfiguration kafkaConfiguration, MetadataStore metadataStore, Partition partition, long referencePoint) {
 		this.referencePoint = referencePoint;
 		this.kafkaTemplate = new KafkaTemplate(kafkaConfiguration);
-		this.offsetManager = new OffsetManager(kafkaConfiguration, kafkaTemplate.getKafkaResolver(), metadataStore, referencePoint);
+		this.offsetManager = new ConsumerIdMetadataStoreOffsetManager(kafkaConfiguration, kafkaTemplate.getKafkaResolver(), metadataStore, referencePoint);
 		this.partition  = partition;
 	}
 

@@ -86,7 +86,7 @@ public class BlockingQueueMessageProcessor implements MessageProcessor,Runnable,
 			try {
 				KafkaMessage nextMessage = this.getMessages().take();
 				messageListener.onMessage(nextMessage);
-				offsetManager.updateOffset(new Offset(nextMessage.getPartition(), nextMessage.getNextOffset()));
+				offsetManager.updateOffset(nextMessage.getPartition(), nextMessage.getNextOffset());
 			}
 			catch (InterruptedException e) {
 				Thread.currentThread().interrupt();

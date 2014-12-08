@@ -30,6 +30,8 @@ import org.springframework.integration.kafka.simple.model.Partition;
  */
 public class KafkaConfiguration {
 
+	private String consumerId;
+
 	private List<KafkaBrokerAddress> brokerAddresses;
 
 	private List<Partition> partitions;
@@ -37,6 +39,14 @@ public class KafkaConfiguration {
 	public KafkaConfiguration(List<KafkaBrokerAddress> brokerAddresses, List<Partition> Partitions) {
 		this.brokerAddresses = brokerAddresses;
 		this.partitions = Partitions;
+	}
+
+	public String getConsumerId() {
+		return consumerId;
+	}
+
+	public void setConsumerId(String consumerId) {
+		this.consumerId = consumerId;
 	}
 
 	public List<KafkaBrokerAddress> getBrokerAddresses() {
