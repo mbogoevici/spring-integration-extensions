@@ -28,6 +28,7 @@ import com.gs.collections.api.block.function.Function;
 import com.gs.collections.impl.list.mutable.FastList;
 
 import org.springframework.context.SmartLifecycle;
+import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
 import org.springframework.integration.kafka.simple.connection.Partition;
 import org.springframework.integration.kafka.simple.consumer.KafkaConfiguration;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
@@ -89,7 +90,10 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	@Override
 	public void start() {
 		this.running.set(true);
-		this.consumerTaskExecutor.execute(new FetchTask(partitions));
+
+		for (KafkaBrokerConnection kafkaBrokerConnection : this.kafkaTemplate.getAllBrokers()) {
+			this.consumerTaskExecutor.execute(new FetchTask(FastList.newList(this.kafkaTemplate.getKafkaBrokerConnectionFactory().resolvePartitions(kafkaBrokerConnection.getBrokerAddress()))));
+		}
 	}
 
 	@Override
