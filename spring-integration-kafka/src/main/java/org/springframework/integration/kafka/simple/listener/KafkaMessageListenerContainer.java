@@ -47,7 +47,6 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 
 	private Executor consumerTaskExecutor = Executors.newSingleThreadExecutor();
 
-
 	private final AtomicBoolean running = new AtomicBoolean(false);
 
 	private final FastList<Partition> partitions;
@@ -90,7 +89,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	@Override
 	public void start() {
 		this.running.set(true);
-		this.consumerTaskExecutor.execute(new FetchTask());
+		this.consumerTaskExecutor.execute(new FetchTask(partitions));
 	}
 
 	@Override
@@ -133,13 +132,20 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	}
 
 	public class FetchTask implements Runnable {
+
+		private FastList<Partition> partitions;
+
+		public FetchTask(FastList<Partition> partition) {
+			this.partitions = partition;
+		}
+
 		@Override
 		public void run() {
 			KafkaMessageListenerContainer kafkaMessageListenerContainer = KafkaMessageListenerContainer.this;
 			while (running.get()) {
 				Set<Partition> partitionsWithRemainingData = new HashSet<Partition>();
 				do {
-					Iterable<KafkaMessageBatch> receive = kafkaTemplate.receive(partitions.collect(new Function<Partition, KafkaMessageFetchRequest>() {
+					Iterable<KafkaMessageBatch> receive = kafkaTemplate.receive(this.partitions.collect(new Function<Partition, KafkaMessageFetchRequest>() {
 						@Override
 						public KafkaMessageFetchRequest valueOf(Partition partition) {
 							return new KafkaMessageFetchRequest(partition, offsetManager.getOffset(partition), maxSize);

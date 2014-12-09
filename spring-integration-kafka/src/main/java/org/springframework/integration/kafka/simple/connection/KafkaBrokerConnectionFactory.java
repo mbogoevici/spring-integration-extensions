@@ -37,9 +37,9 @@ public class KafkaBrokerConnectionFactory {
 
 	private UnifiedMap<KafkaBrokerAddress, KafkaBrokerConnection> kafkaBrokersCache = UnifiedMap.newMap();
 
-	private final AtomicReference<PartitionBrokerMap> partitionBrokerTableReference = new AtomicReference<PartitionBrokerMap>();
+	private final AtomicReference<PartitionBrokerMap> partitionBrokerMapReference = new AtomicReference<PartitionBrokerMap>();
 
-	private KafkaBrokerConnection adminBroker;
+	private KafkaBrokerConnection defaultBroker;
 
 	/**
 	 * @param kafkaBrokerAddresses
@@ -56,8 +56,8 @@ public class KafkaBrokerConnectionFactory {
 		refresh();
 	}
 
-	public KafkaBrokerConnection getAdminBroker() {
-		return adminBroker;
+	public KafkaBrokerConnection getDefaultBroker() {
+		return defaultBroker;
 	}
 
 	/**
@@ -68,7 +68,7 @@ public class KafkaBrokerConnectionFactory {
 	 * @return the broker associated with the provided topic and partition
 	 */
 	public KafkaBrokerConnection resolveBroker(Partition partition) {
-		KafkaBrokerAddress kafkaBrokerAddress = partitionBrokerTableReference.get().getBrokersByPartition().get(partition);
+		KafkaBrokerAddress kafkaBrokerAddress = partitionBrokerMapReference.get().getBrokersByPartition().get(partition);
 		return resolveAddress(kafkaBrokerAddress);
 	}
 
@@ -90,21 +90,29 @@ public class KafkaBrokerConnectionFactory {
 	}
 
 	public List<Partition> resolvePartitions(KafkaBrokerAddress kafkaBrokerAddress) {
-		return partitionBrokerTableReference.get().getPartitionsByBroker().get(kafkaBrokerAddress).toList();
+		return partitionBrokerMapReference.get().getPartitionsByBroker().get(kafkaBrokerAddress).toList();
 	}
 
 	public KafkaBrokerConnection resolveAddress(KafkaBrokerAddress kafkaBrokerAddress) {
 		return kafkaBrokersCache.getIfAbsentPutWith(kafkaBrokerAddress, new KafkaBrokerInstantiator(), kafkaBrokerAddress);
 	}
 
+	public PartitionBrokerMap getPartitionBrokerMap() {
+		return partitionBrokerMapReference.get();
+	}
+
+
 	public void refresh() {
-		synchronized (partitionBrokerTableReference) {
+		synchronized (partitionBrokerMapReference) {
+			for (KafkaBrokerConnection kafkaBrokerConnection : kafkaBrokersCache) {
+				kafkaBrokerConnection.close();
+			}
 			for (KafkaBrokerAddress kafkaBrokerAddress : kafkaBrokerAddresses) {
 				KafkaBrokerConnection kafkaBrokerConnection = new KafkaBrokerConnection(kafkaBrokerAddress);
 				KafkaResult<KafkaBrokerAddress> leaders = kafkaBrokerConnection.findLeaders(topics);
 				if (leaders.getErrors().size() == 0) {
-					this.adminBroker = kafkaBrokerConnection;
-					this.partitionBrokerTableReference.set(new PartitionBrokerMap(UnifiedMap.newMap(leaders.getResult())));
+					this.defaultBroker = kafkaBrokerConnection;
+					this.partitionBrokerMapReference.set(new PartitionBrokerMap(UnifiedMap.newMap(leaders.getResult())));
 				}
 			}
 		}
@@ -113,8 +121,8 @@ public class KafkaBrokerConnectionFactory {
 	private class KafkaBrokerInstantiator implements Function<KafkaBrokerAddress, KafkaBrokerConnection> {
 		@Override
 		public KafkaBrokerConnection valueOf(KafkaBrokerAddress kafkaBrokerAddress) {
-			if (KafkaBrokerConnectionFactory.this.adminBroker.getBrokerAddress().equals(kafkaBrokerAddress)) {
-				return KafkaBrokerConnectionFactory.this.adminBroker;
+			if (KafkaBrokerConnectionFactory.this.defaultBroker.getBrokerAddress().equals(kafkaBrokerAddress)) {
+				return KafkaBrokerConnectionFactory.this.defaultBroker;
 			}
 			else {
 				return new KafkaBrokerConnection(kafkaBrokerAddress);

@@ -25,11 +25,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.gs.collections.api.LazyIterable;
 import com.gs.collections.api.block.function.Function;
-import com.gs.collections.impl.factory.Lists;
 import com.gs.collections.impl.list.mutable.FastList;
-import com.gs.collections.impl.utility.Iterate;
 import com.gs.collections.impl.utility.LazyIterate;
 import kafka.api.FetchRequestBuilder;
 import kafka.api.PartitionOffsetRequestInfo;
@@ -51,8 +48,8 @@ import kafka.javaapi.consumer.SimpleConsumer;
 import kafka.message.MessageAndOffset;
 
 import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
-import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageBatch;
+import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
 import org.springframework.integration.kafka.simple.offset.Offset;
 import org.springframework.util.Assert;
 
@@ -95,6 +92,10 @@ public class KafkaBrokerConnection {
 	 */
 	public KafkaBrokerAddress getBrokerAddress() {
 		return brokerAddress;
+	}
+
+	public void close() {
+		this.simpleConsumer.close();
 	}
 
 	/**
