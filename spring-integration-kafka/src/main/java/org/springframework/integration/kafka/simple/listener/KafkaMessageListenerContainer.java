@@ -66,7 +66,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	public KafkaMessageListenerContainer(KafkaConfiguration kafkaConfiguration, MetadataStore metadataStore, Partition partition, long referencePoint) {
 		this.referencePoint = referencePoint;
 		this.kafkaTemplate = new KafkaTemplate(kafkaConfiguration);
-		this.offsetManager = new MetadataStoreOffsetManager(kafkaConfiguration, kafkaTemplate.getKafkaResolver(), metadataStore, referencePoint);
+		this.offsetManager = new MetadataStoreOffsetManager(kafkaConfiguration, kafkaTemplate.getKafkaBrokerConnectionFactory(), metadataStore, referencePoint);
 		this.partition  = partition;
 	}
 

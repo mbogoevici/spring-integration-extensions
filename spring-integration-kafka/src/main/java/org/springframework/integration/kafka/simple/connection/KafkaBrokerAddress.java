@@ -20,6 +20,8 @@ package org.springframework.integration.kafka.simple.connection;
 import org.springframework.util.StringUtils;
 
 /**
+ * The address of a Kafka broker
+ *
  * @author Marius Bogoevici
  */
 public class KafkaBrokerAddress {

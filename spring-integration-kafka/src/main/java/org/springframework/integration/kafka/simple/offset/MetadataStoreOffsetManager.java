@@ -27,7 +27,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
 import org.springframework.integration.kafka.simple.consumer.KafkaConfiguration;
-import org.springframework.integration.kafka.simple.connection.KafkaResolver;
+import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
 import org.springframework.integration.kafka.simple.connection.KafkaResult;
 import org.springframework.integration.kafka.simple.connection.Partition;
 import org.springframework.integration.metadata.MetadataStore;
@@ -46,16 +46,16 @@ public class MetadataStoreOffsetManager implements OffsetManager {
 
 	private MetadataStore metadataStore;
 
-	private KafkaResolver kafkaResolver;
+	private KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory;
 
 	private long referencePoint;
 
 	private MutableMap<Partition, Long> offsets = new ConcurrentHashMap<Partition, Long>();
 
-	public MetadataStoreOffsetManager(KafkaConfiguration kafkaConfiguration, KafkaResolver kafkaResolver, MetadataStore metadataStore, long referencePoint) {
+	public MetadataStoreOffsetManager(KafkaConfiguration kafkaConfiguration, KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, MetadataStore metadataStore, long referencePoint) {
 		this.kafkaConfiguration = kafkaConfiguration;
 		this.metadataStore = metadataStore;
-		this.kafkaResolver = kafkaResolver;
+		this.kafkaBrokerConnectionFactory = kafkaBrokerConnectionFactory;
 		this.referencePoint = referencePoint;
 		this.offsets = new ConcurrentHashMap<Partition, Long>();
 		loadOffsets();
@@ -74,7 +74,7 @@ public class MetadataStoreOffsetManager implements OffsetManager {
 	}
 
 	private void loadOffsets() {
-		KafkaBrokerConnection kafkaBrokerConnection = kafkaResolver.resolveAddress(kafkaConfiguration.getBrokerAddresses().get(0));
+		KafkaBrokerConnection kafkaBrokerConnection = kafkaBrokerConnectionFactory.resolveAddress(kafkaConfiguration.getBrokerAddresses().get(0));
 		List<Partition> partitionsRequiringInitialOffsets = new ArrayList<Partition>();
 		for (Partition partition : kafkaConfiguration.getPartitions()) {
 			String storedOffsetValueAsString = this.metadataStore.get(asKey(partition));

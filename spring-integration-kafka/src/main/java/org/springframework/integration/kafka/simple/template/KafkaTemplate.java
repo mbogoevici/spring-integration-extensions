@@ -29,7 +29,7 @@ import com.gs.collections.impl.utility.LazyIterate;
 import kafka.message.MessageAndOffset;
 
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
-import org.springframework.integration.kafka.simple.connection.KafkaResolver;
+import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
 import org.springframework.integration.kafka.simple.connection.KafkaResult;
 import org.springframework.integration.kafka.simple.consumer.KafkaConfiguration;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
@@ -45,25 +45,25 @@ import org.springframework.integration.kafka.simple.connection.Partition;
  */
 public class KafkaTemplate {
 
-	private final KafkaResolver kafkaResolver;
+	private final KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory;
 
 	private KafkaConfiguration kafkaConfiguration;
 
 	public KafkaTemplate(KafkaConfiguration kafkaConfiguration) {
 		this.kafkaConfiguration = kafkaConfiguration;
-		this.kafkaResolver = new KafkaResolver(kafkaConfiguration.getBrokerAddresses(), kafkaConfiguration.getPartitions().toArray(new Partition[kafkaConfiguration.getPartitions().size()]));
+		this.kafkaBrokerConnectionFactory = new KafkaBrokerConnectionFactory(kafkaConfiguration.getBrokerAddresses(), kafkaConfiguration.getPartitions().toArray(new Partition[kafkaConfiguration.getPartitions().size()]));
 	}
 
 	public List<KafkaBrokerConnection> getAllBrokers() {
-		return new ArrayList<KafkaBrokerConnection>(kafkaResolver.resolveBrokers(kafkaConfiguration.getPartitions()).values());
+		return new ArrayList<KafkaBrokerConnection>(kafkaBrokerConnectionFactory.resolveBrokers(kafkaConfiguration.getPartitions()).values());
 	}
 
-	public KafkaResolver getKafkaResolver() {
-		return kafkaResolver;
+	public KafkaBrokerConnectionFactory getKafkaBrokerConnectionFactory() {
+		return kafkaBrokerConnectionFactory;
 	}
 
 	public List<KafkaMessage> receive(KafkaBrokerAddress kafkaBrokerAddress, final Map<Partition, Offset> offsets, final int maxSize) {
-		return this.receive(FastList.newList(kafkaResolver.resolvePartitions(kafkaBrokerAddress)).collect(new Function<Partition, KafkaMessageFetchRequest>() {
+		return this.receive(FastList.newList(kafkaBrokerConnectionFactory.resolvePartitions(kafkaBrokerAddress)).collect(new Function<Partition, KafkaMessageFetchRequest>() {
 			@Override
 			public KafkaMessageFetchRequest valueOf(Partition partition) {
 				return new KafkaMessageFetchRequest(partition, offsets.get(partition).getOffset(), maxSize);
@@ -75,16 +75,16 @@ public class KafkaTemplate {
 		MutableList<KafkaBrokerAddress> distinctBrokerAddresses = ArrayIterate.collect(messageFetchRequests, new Function<KafkaMessageFetchRequest, KafkaBrokerAddress>() {
 			@Override
 			public KafkaBrokerAddress valueOf(KafkaMessageFetchRequest fetchRequest) {
-				return kafkaResolver.resolveBroker(fetchRequest.getPartition()).getBrokerAddress();
+				return kafkaBrokerConnectionFactory.resolveBroker(fetchRequest.getPartition()).getBrokerAddress();
 			}
 		}).distinct();
 		if (distinctBrokerAddresses.size() != 1) {
 			throw new IllegalArgumentException("All messages must be fetched from the same broker");
 		}
-		KafkaResult<KafkaMessageBatch> fetch = kafkaResolver.resolveAddress(distinctBrokerAddresses.get(0)).fetch(messageFetchRequests);
+		KafkaResult<KafkaMessageBatch> fetch = kafkaBrokerConnectionFactory.resolveAddress(distinctBrokerAddresses.get(0)).fetch(messageFetchRequests);
 		if (fetch.getErrors().size() > 0) {
 			// synchronously refresh on error
-			kafkaResolver.refresh();
+			kafkaBrokerConnectionFactory.refresh();
 		}
 		return FastList.newList(fetch.getResult().entrySet()).flatCollect(new Function<Map.Entry<Partition, KafkaMessageBatch>, Iterable<KafkaMessage>>() {
 			@Override

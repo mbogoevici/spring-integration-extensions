@@ -29,7 +29,7 @@ import com.gs.collections.impl.map.mutable.UnifiedMap;
 /**
  * @author Marius Bogoevici
  */
-public class KafkaResolver {
+public class KafkaBrokerConnectionFactory {
 
 	private final String[] topics;
 
@@ -45,7 +45,7 @@ public class KafkaResolver {
 	 * @param kafkaBrokerAddresses
 	 * @param partitions
 	 */
-	public KafkaResolver(List<KafkaBrokerAddress> kafkaBrokerAddresses, Partition... partitions) {
+	public KafkaBrokerConnectionFactory(List<KafkaBrokerAddress> kafkaBrokerAddresses, Partition... partitions) {
 		this.kafkaBrokerAddresses = FastList.newList(kafkaBrokerAddresses);
 		this.topics = FastList.newListWith(partitions).collect(new Function<Partition, String>() {
 			@Override
@@ -113,8 +113,8 @@ public class KafkaResolver {
 	private class KafkaBrokerInstantiator implements Function<KafkaBrokerAddress, KafkaBrokerConnection> {
 		@Override
 		public KafkaBrokerConnection valueOf(KafkaBrokerAddress kafkaBrokerAddress) {
-			if (KafkaResolver.this.adminBroker.getBrokerAddress().equals(kafkaBrokerAddress)) {
-				return KafkaResolver.this.adminBroker;
+			if (KafkaBrokerConnectionFactory.this.adminBroker.getBrokerAddress().equals(kafkaBrokerAddress)) {
+				return KafkaBrokerConnectionFactory.this.adminBroker;
 			}
 			else {
 				return new KafkaBrokerConnection(kafkaBrokerAddress);
