@@ -40,7 +40,7 @@ public class KafkaResolver {
 
 	private UnifiedMap<KafkaBrokerAddress, KafkaBrokerConnection> kafkaBrokersCache = UnifiedMap.newMap();
 
-	private final AtomicReference<PartitionBrokerTable> partitionBrokerTableReference = new AtomicReference<PartitionBrokerTable>();
+	private final AtomicReference<PartitionBrokerMap> partitionBrokerTableReference = new AtomicReference<PartitionBrokerMap>();
 
 	private KafkaBrokerConnection adminBroker;
 
@@ -107,7 +107,7 @@ public class KafkaResolver {
 				KafkaResult<KafkaBrokerAddress> leaders = kafkaBrokerConnection.findLeaders(topics);
 				if (leaders.getErrors().size() == 0) {
 					this.adminBroker = kafkaBrokerConnection;
-					this.partitionBrokerTableReference.set(new PartitionBrokerTable(UnifiedMap.newMap(leaders.getResult())));
+					this.partitionBrokerTableReference.set(new PartitionBrokerMap(UnifiedMap.newMap(leaders.getResult())));
 				}
 			}
 		}

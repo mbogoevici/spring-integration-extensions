@@ -52,19 +52,21 @@ import org.springframework.integration.kafka.simple.model.Partition;
 import org.springframework.util.Assert;
 
 /**
+ * An open connection to a Kafka broker
+ *
  * @author Marius Bogoevici
  */
 public class KafkaBrokerConnection {
 
-	public static final String DEFAULT_CLIENT_ID = "spring.integration.kafka";
+	public static final String DEFAULT_CLIENT_ID = "spring.kafka";
 
-	public static final int DEFAULT_BUFFER_SIZE = 400000000;
+	public static final int DEFAULT_BUFFER_SIZE = 64 * 1024;
 
-	public static final int DEFAULT_SOCKET_TIMEOUT = 10000;
+	public static final int DEFAULT_SOCKET_TIMEOUT = 10 * 1000;
+
+	private final static AtomicInteger CORRELATION_ID_COUNTER = new AtomicInteger(new Random(new Date().getTime()).nextInt());
 
 	private final SimpleConsumer simpleConsumer;
-
-	private final static AtomicInteger correlationIdCounter = new AtomicInteger(new Random(new Date().getTime()).nextInt());
 
 	private KafkaBrokerAddress brokerAddress;
 
@@ -81,18 +83,28 @@ public class KafkaBrokerConnection {
 		this.simpleConsumer = new SimpleConsumer(brokerAddress.getHost(), brokerAddress.getPort(), soTimeout, bufferSize, clientId);
 	}
 
+	/**
+	 * The broker address for this consumer
+	 *
+	 * @return
+	 */
 	public KafkaBrokerAddress getBrokerAddress() {
 		return brokerAddress;
 	}
 
-	public KafkaResult<KafkaMessageBatch> fetch(KafkaMessageFetchRequest... kafkaMessageFetchRequests) {
+	/**
+	 * Fetches results
+	 *
+	 * @return a combination of messages and errors, depending on whether the invocation was successful or not
+	 */
+	public KafkaResult<KafkaMessageBatch> fetch(KafkaMessageFetchRequest... requests) {
 		FetchRequestBuilder fetchRequestBuilder = new FetchRequestBuilder();
-		for (KafkaMessageFetchRequest kafkaMessageFetchRequest : kafkaMessageFetchRequests) {
+		for (KafkaMessageFetchRequest kafkaMessageFetchRequest : requests) {
 			fetchRequestBuilder.addFetch(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber(), kafkaMessageFetchRequest.getOffset(), kafkaMessageFetchRequest.getMaxSize());
 		}
 		FetchResponse fetchResponse = this.simpleConsumer.fetch(fetchRequestBuilder.build());
 		KafkaResultBuilder<KafkaMessageBatch> kafkaResultBuilder = new KafkaResultBuilder<KafkaMessageBatch>();
-		for (KafkaMessageFetchRequest kafkaMessageFetchRequest : kafkaMessageFetchRequests) {
+		for (KafkaMessageFetchRequest kafkaMessageFetchRequest : requests) {
 			System.out.println("Reading from " + kafkaMessageFetchRequest.getPartition() + "@" + kafkaMessageFetchRequest.getOffset());
 			short errorCode = fetchResponse.errorCode(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber());
 			if (ErrorMapping.NoError() == errorCode) {
@@ -195,12 +207,12 @@ public class KafkaBrokerConnection {
 	}
 
 	/**
-	 * Creates a pseudo-unique correlation id for the requests and responses
+	 * Creates a pseudo-unique correlation id for requests and responses
 	 *
-	 * @return
+	 * @return correlation id
 	 */
 	private static Integer createCorrelationId() {
-		return correlationIdCounter.incrementAndGet();
+		return CORRELATION_ID_COUNTER.incrementAndGet();
 	}
 
 }

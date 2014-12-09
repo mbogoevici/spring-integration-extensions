@@ -24,15 +24,17 @@ import org.springframework.integration.kafka.simple.model.KafkaBrokerAddress;
 import org.springframework.integration.kafka.simple.model.Partition;
 
 /**
+ * Stores the partition/broker mapping
+ *
  * @author Marius Bogoevici
  */
-public class PartitionBrokerTable {
+public class PartitionBrokerMap {
 
 	private Multimap<KafkaBrokerAddress, Partition> partitionsByBroker;
 
 	private UnifiedMap<Partition, KafkaBrokerAddress> brokersByPartition;
 
-	public PartitionBrokerTable(UnifiedMap<Partition, KafkaBrokerAddress> brokersByPartition) {
+	public PartitionBrokerMap(UnifiedMap<Partition, KafkaBrokerAddress> brokersByPartition) {
 		this.brokersByPartition = brokersByPartition;
 		this.partitionsByBroker = brokersByPartition.flip();
 	}

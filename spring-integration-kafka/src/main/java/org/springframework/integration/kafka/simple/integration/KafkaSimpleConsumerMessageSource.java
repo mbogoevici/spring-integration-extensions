@@ -29,7 +29,7 @@ import org.springframework.integration.context.IntegrationObjectSupport;
 import org.springframework.integration.core.MessageSource;
 import org.springframework.integration.kafka.simple.consumer.KafkaConfiguration;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
-import org.springframework.integration.kafka.simple.consumer.KafkaTemplate;
+import org.springframework.integration.kafka.simple.template.KafkaTemplate;
 import org.springframework.integration.kafka.simple.model.Partition;
 import org.springframework.integration.kafka.simple.model.KafkaBrokerAddress;
 import org.springframework.integration.kafka.simple.model.KafkaMessage;

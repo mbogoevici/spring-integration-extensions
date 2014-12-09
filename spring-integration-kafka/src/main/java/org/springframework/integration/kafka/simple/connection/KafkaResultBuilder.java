@@ -23,6 +23,8 @@ import java.util.Map;
 import org.springframework.integration.kafka.simple.model.Partition;
 
 /**
+ * Utility class for building a {@link KafkaResult}
+ *
  * @author Marius Bogoevici
  */
 public class KafkaResultBuilder<T> {
@@ -36,23 +38,23 @@ public class KafkaResultBuilder<T> {
 		this.errors = new HashMap<Partition, Short>();
 	}
 
-	public KafkaResultBuilderPartition add(Partition Partition) {
-		return new KafkaResultBuilderPartition(Partition);
+	public KafkaPartitionResultHolder add(Partition Partition) {
+		return new KafkaPartitionResultHolder(Partition);
 	}
 
 	public KafkaResult<T> build() {
-		return new KafkaResult(result, errors);
+		return new KafkaResult<T>(result, errors);
 	}
 
-	public class KafkaResultBuilderPartition<T1 extends T> {
+	class KafkaPartitionResultHolder {
 
 		private Partition Partition;
 
-		public KafkaResultBuilderPartition(Partition Partition) {
+		public KafkaPartitionResultHolder(Partition Partition) {
 			this.Partition = Partition;
 		}
 
-		public KafkaResultBuilder withResult(T1 result) {
+		public KafkaResultBuilder withResult(T result) {
 			if (KafkaResultBuilder.this.errors.containsKey(Partition)) {
 				throw new IllegalArgumentException("A KafkaResult cannot contain both an error and a result for the same topic and partition");
 			}

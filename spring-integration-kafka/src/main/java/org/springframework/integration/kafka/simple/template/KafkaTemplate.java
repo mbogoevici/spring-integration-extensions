@@ -15,7 +15,7 @@
  */
 
 
-package org.springframework.integration.kafka.simple.consumer;
+package org.springframework.integration.kafka.simple.template;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +31,8 @@ import kafka.message.MessageAndOffset;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
 import org.springframework.integration.kafka.simple.connection.KafkaResolver;
 import org.springframework.integration.kafka.simple.connection.KafkaResult;
+import org.springframework.integration.kafka.simple.consumer.KafkaConfiguration;
+import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
 import org.springframework.integration.kafka.simple.model.KafkaBrokerAddress;
 import org.springframework.integration.kafka.simple.model.KafkaMessage;
 import org.springframework.integration.kafka.simple.model.KafkaMessageBatch;
