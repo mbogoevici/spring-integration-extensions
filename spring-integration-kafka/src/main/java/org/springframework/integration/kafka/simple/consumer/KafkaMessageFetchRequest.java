@@ -17,7 +17,7 @@
 
 package org.springframework.integration.kafka.simple.consumer;
 
-import org.springframework.integration.kafka.simple.model.Partition;
+import org.springframework.integration.kafka.simple.connection.Partition;
 
 /**
  * @author Marius Bogoevici

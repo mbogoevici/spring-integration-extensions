@@ -45,10 +45,8 @@ import kafka.javaapi.TopicMetadataResponse;
 import kafka.javaapi.consumer.SimpleConsumer;
 
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
-import org.springframework.integration.kafka.simple.model.KafkaBrokerAddress;
-import org.springframework.integration.kafka.simple.model.KafkaMessageBatch;
-import org.springframework.integration.kafka.simple.model.Offset;
-import org.springframework.integration.kafka.simple.model.Partition;
+import org.springframework.integration.kafka.simple.consumer.KafkaMessageBatch;
+import org.springframework.integration.kafka.simple.offset.Offset;
 import org.springframework.util.Assert;
 
 /**

@@ -15,25 +15,22 @@
  */
 
 
-package org.springframework.integration.kafka.simple.model;
+package org.springframework.integration.kafka.simple.offset;
 
-import kafka.javaapi.message.MessageSet;
+import org.springframework.integration.kafka.simple.connection.Partition;
 
 /**
  * @author Marius Bogoevici
  */
-public class KafkaMessageBatch {
+public class Offset {
 
 	private Partition partition;
 
-	private MessageSet messageSet;
+	private long offset;
 
-	private long highWatermark;
-
-	public KafkaMessageBatch(Partition partition, MessageSet messageSet, long highWatermark) {
+	public Offset(Partition partition, long offset) {
 		this.partition = partition;
-		this.messageSet = messageSet;
-		this.highWatermark = highWatermark;
+		this.offset = offset;
 	}
 
 	public Partition getPartition() {
@@ -44,19 +41,31 @@ public class KafkaMessageBatch {
 		this.partition = partition;
 	}
 
-	public MessageSet getMessageSet() {
-		return messageSet;
+	public long getOffset() {
+		return offset;
 	}
 
-	public void setMessageSet(MessageSet messageSet) {
-		this.messageSet = messageSet;
+	public void setOffset(long offset) {
+		this.offset = offset;
 	}
 
-	public long getHighWatermark() {
-		return highWatermark;
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+
+		Offset offset1 = (Offset) o;
+
+		if (offset != offset1.offset) return false;
+		if (!partition.equals(offset1.partition)) return false;
+
+		return true;
 	}
 
-	public void setHighWatermark(long highWatermark) {
-		this.highWatermark = highWatermark;
+	@Override
+	public int hashCode() {
+		int result = partition.hashCode();
+		result = 31 * result + (int) (offset ^ (offset >>> 32));
+		return result;
 	}
 }

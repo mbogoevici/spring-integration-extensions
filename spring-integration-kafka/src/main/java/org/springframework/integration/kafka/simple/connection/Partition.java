@@ -15,7 +15,7 @@
  */
 
 
-package org.springframework.integration.kafka.simple.model;
+package org.springframework.integration.kafka.simple.connection;
 
 /**
  * @author Marius Bogoevici

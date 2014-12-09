@@ -17,7 +17,7 @@
 
 package org.springframework.integration.kafka.simple.offset;
 
-import org.springframework.integration.kafka.simple.model.Partition;
+import org.springframework.integration.kafka.simple.connection.Partition;
 
 /**
  * Stores and retrieves offsets for a Kafka consumer

@@ -22,8 +22,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.springframework.integration.kafka.simple.model.KafkaBrokerAddress;
-import org.springframework.integration.kafka.simple.model.Partition;
+import org.springframework.integration.kafka.simple.connection.KafkaBrokerAddress;
+import org.springframework.integration.kafka.simple.connection.Partition;
 
 /**
  * @author Marius Bogoevici

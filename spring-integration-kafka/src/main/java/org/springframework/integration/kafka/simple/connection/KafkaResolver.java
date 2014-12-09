@@ -26,9 +26,6 @@ import com.gs.collections.impl.block.factory.Functions;
 import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.map.mutable.UnifiedMap;
 
-import org.springframework.integration.kafka.simple.model.KafkaBrokerAddress;
-import org.springframework.integration.kafka.simple.model.Partition;
-
 /**
  * @author Marius Bogoevici
  */

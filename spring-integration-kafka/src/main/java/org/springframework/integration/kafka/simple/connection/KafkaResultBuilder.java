@@ -20,8 +20,6 @@ package org.springframework.integration.kafka.simple.connection;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.integration.kafka.simple.model.Partition;
-
 /**
  * Utility class for building a {@link KafkaResult}
  *

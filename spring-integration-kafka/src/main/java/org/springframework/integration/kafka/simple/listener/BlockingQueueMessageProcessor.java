@@ -22,8 +22,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.springframework.context.Lifecycle;
-import org.springframework.integration.kafka.simple.model.KafkaMessage;
-import org.springframework.integration.kafka.simple.model.Offset;
+import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
 import org.springframework.integration.kafka.simple.offset.OffsetManager;
 
 /**

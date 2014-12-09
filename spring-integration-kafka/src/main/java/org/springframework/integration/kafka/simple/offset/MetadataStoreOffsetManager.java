@@ -29,7 +29,7 @@ import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnec
 import org.springframework.integration.kafka.simple.consumer.KafkaConfiguration;
 import org.springframework.integration.kafka.simple.connection.KafkaResolver;
 import org.springframework.integration.kafka.simple.connection.KafkaResult;
-import org.springframework.integration.kafka.simple.model.Partition;
+import org.springframework.integration.kafka.simple.connection.Partition;
 import org.springframework.integration.metadata.MetadataStore;
 
 /**
