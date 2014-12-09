@@ -69,6 +69,7 @@ dependencies {
 
 	testCompile "org.springframework.integration:spring-integration-test:$springIntegrationVersion"
 	testCompile "org.springframework.integration:spring-integration-stream:$springIntegrationVersion"
+	testCompile "org.apache.kafka:kafka_$scalaVersion:$kafkaVersion:test"
 
 	jacoco "org.jacoco:org.jacoco.agent:$jacocoVersion:runtime"
 }
