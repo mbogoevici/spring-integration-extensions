@@ -17,6 +17,7 @@
 
 package org.springframework.integration.kafka.simple.connection;
 
+import com.gs.collections.api.block.function.Function;
 import com.gs.collections.api.multimap.Multimap;
 import com.gs.collections.impl.map.mutable.UnifiedMap;
 
@@ -31,8 +32,16 @@ public class PartitionBrokerMap {
 
 	private UnifiedMap<Partition, KafkaBrokerAddress> brokersByPartition;
 
+	private Multimap<String, Partition> partitionsByTopic;
+
 	public PartitionBrokerMap(UnifiedMap<Partition, KafkaBrokerAddress> brokersByPartition) {
 		this.brokersByPartition = brokersByPartition;
+		this.partitionsByTopic = this.brokersByPartition.keysView().groupBy(new Function<Partition, String>() {
+			@Override
+			public String valueOf(Partition partition) {
+				return partition.getTopic();
+			}
+		});
 		this.partitionsByBroker = brokersByPartition.flip();
 	}
 
@@ -42,5 +51,9 @@ public class PartitionBrokerMap {
 
 	public UnifiedMap<Partition, KafkaBrokerAddress> getBrokersByPartition() {
 		return brokersByPartition;
+	}
+
+	public Multimap<String, Partition> getPartitionsByTopic() {
+		return partitionsByTopic;
 	}
 }

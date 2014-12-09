@@ -17,6 +17,7 @@
 
 package org.springframework.integration.kafka.simple.connection;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -41,13 +42,9 @@ public class KafkaBrokerConnectionFactory {
 
 	private KafkaBrokerConnection defaultBroker;
 
-	/**
-	 * @param kafkaBrokerAddresses
-	 * @param partitions
-	 */
-	public KafkaBrokerConnectionFactory(List<KafkaBrokerAddress> kafkaBrokerAddresses, Partition... partitions) {
-		this.kafkaBrokerAddresses = FastList.newList(kafkaBrokerAddresses);
-		this.topics = FastList.newListWith(partitions).collect(new Function<Partition, String>() {
+	public KafkaBrokerConnectionFactory(KafkaConfiguration kafkaConfiguration) {
+		this.kafkaBrokerAddresses = FastList.newList(kafkaConfiguration.getBrokerAddresses());
+		this.topics = FastList.newList(kafkaConfiguration.getPartitions()).collect(new Function<Partition, String>() {
 			@Override
 			public String valueOf(Partition partition) {
 				return partition.getTopic();
@@ -56,9 +53,10 @@ public class KafkaBrokerConnectionFactory {
 		refresh();
 	}
 
-	public KafkaBrokerConnection getDefaultBroker() {
-		return defaultBroker;
+	public List<KafkaBrokerAddress> getBrokerAddresses() {
+		return kafkaBrokerAddresses;
 	}
+
 
 	/**
 	 * Resolves the broker associated with a specific topic and partition. Internally,
@@ -80,7 +78,7 @@ public class KafkaBrokerConnectionFactory {
 	 * @param topicsAndPartitions
 	 * @return the broker associated with the provided topic and partition
 	 */
-	public Map<Partition, KafkaBrokerConnection> resolveBrokers(final List<Partition> topicsAndPartitions) {
+	public Map<Partition, KafkaBrokerConnection> resolveBrokers(final Collection<Partition> topicsAndPartitions) {
 		return FastList.newList(topicsAndPartitions).toMap(Functions.<Partition>getPassThru(), new Function<Partition, KafkaBrokerConnection>() {
 			@Override
 			public KafkaBrokerConnection valueOf(Partition partition) {
@@ -116,6 +114,14 @@ public class KafkaBrokerConnectionFactory {
 				}
 			}
 		}
+	}
+
+	public Collection<Partition> getPartitions() {
+		return getPartitionBrokerMap().getBrokersByPartition().keySet();
+	}
+
+	public Collection<Partition> getPartitions(String topic) {
+		return getPartitionBrokerMap().getPartitionsByTopic().get(topic).toList();
 	}
 
 	private class KafkaBrokerInstantiator implements Function<KafkaBrokerAddress, KafkaBrokerConnection> {

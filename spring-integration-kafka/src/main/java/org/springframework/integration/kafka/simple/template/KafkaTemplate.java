@@ -18,7 +18,6 @@
 package org.springframework.integration.kafka.simple.template;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -26,16 +25,12 @@ import com.gs.collections.api.block.function.Function;
 import com.gs.collections.api.list.MutableList;
 import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.utility.ArrayIterate;
-import com.gs.collections.impl.utility.LazyIterate;
-import kafka.message.MessageAndOffset;
 
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
 import org.springframework.integration.kafka.simple.connection.KafkaResult;
-import org.springframework.integration.kafka.simple.consumer.KafkaConfiguration;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerAddress;
-import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageBatch;
 import org.springframework.integration.kafka.simple.offset.Offset;
 import org.springframework.integration.kafka.simple.connection.Partition;
@@ -48,15 +43,12 @@ public class KafkaTemplate {
 
 	private final KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory;
 
-	private KafkaConfiguration kafkaConfiguration;
-
-	public KafkaTemplate(KafkaConfiguration kafkaConfiguration) {
-		this.kafkaConfiguration = kafkaConfiguration;
-		this.kafkaBrokerConnectionFactory = new KafkaBrokerConnectionFactory(kafkaConfiguration.getBrokerAddresses(), kafkaConfiguration.getPartitions().toArray(new Partition[kafkaConfiguration.getPartitions().size()]));
+	public KafkaTemplate(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory) {
+		this.kafkaBrokerConnectionFactory = kafkaBrokerConnectionFactory;
 	}
 
 	public List<KafkaBrokerConnection> getAllBrokers() {
-		return new ArrayList<KafkaBrokerConnection>(kafkaBrokerConnectionFactory.resolveBrokers(kafkaConfiguration.getPartitions()).values());
+		return new ArrayList<KafkaBrokerConnection>(kafkaBrokerConnectionFactory.resolveBrokers(kafkaBrokerConnectionFactory.getPartitions()).values());
 	}
 
 	public KafkaBrokerConnectionFactory getKafkaBrokerConnectionFactory() {

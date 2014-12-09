@@ -2,52 +2,69 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
 	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	   xmlns:int="http://www.springframework.org/schema/integration"
-	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd">
+	   xmlns:util="http://www.springframework.org/schema/util"
+	   xsi:schemaLocation="
+	   http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+	   http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+	   http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
 
 	<int:channel id="input"/>
 
-	<bean id="kafkaMessageListener" class="org.springframework.integration.kafka.simple.listener.KafkaMessageListenerContainer">
-		<constructor-arg index="0">
-			<bean class="org.springframework.integration.kafka.simple.consumer.KafkaConfiguration">
-				<constructor-arg index="0">
-					<list>
-						<bean class="org.springframework.integration.kafka.simple.connection.KafkaBrokerAddress">
-							<constructor-arg index="0" value="localhost"/>
-							<constructor-arg index="1" value="9092"/>
-						</bean>
-					</list>
-				</constructor-arg>
-				<constructor-arg index="1">
-					<list>
-						<bean class="org.springframework.integration.kafka.simple.connection.Partition">
-							<constructor-arg index="0" value="kafka-source-test"/>
-							<constructor-arg index="1" value="0"/>
-						</bean>
-					</list>
-				</constructor-arg>
-			</bean>
-		</constructor-arg>
+	<util:list id="kafkaBrokerAddresses">
+		<bean class="org.springframework.integration.kafka.simple.connection.KafkaBrokerAddress">
+			<constructor-arg index="0" value="localhost"/>
+			<constructor-arg index="1" value="9092"/>
+		</bean>
+	</util:list>
 
+	<util:list id="partitions">
+		<bean class="org.springframework.integration.kafka.simple.connection.Partition">
+			<constructor-arg index="0" value="kafka-source-test"/>
+			<constructor-arg index="1" value="0"/>
+		</bean>
+	</util:list>
+
+	<bean id="kafkaConfiguration" class="org.springframework.integration.kafka.simple.connection.KafkaConfiguration">
+		<constructor-arg index="0" ref="kafkaBrokerAddresses"/>
+		<constructor-arg index="1" ref="partitions"/>
+	</bean>
+
+	<bean id="connectionFactory" class="org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory">
+		<constructor-arg index="0" ref="kafkaConfiguration"/>
+	</bean>
+
+	<bean id="offsetManager" class="org.springframework.integration.kafka.simple.offset.MetadataStoreOffsetManager">
+		<constructor-arg index="0" ref="connectionFactory"/>
 		<constructor-arg index="1">
 			<bean class="org.springframework.integration.metadata.SimpleMetadataStore"/>
 			<!--<bean class="org.springframework.integration.metadata.PropertiesPersistingMetadataStore">-->
-				<!--<property name="baseDirectory" value="/Users/mbogoevici"/>-->
+			<!--<property name="baseDirectory" value="/Users/mbogoevici"/>-->
 			<!--</bean>-->
 		</constructor-arg>
-		<constructor-arg index="2">
-			<bean class="org.springframework.integration.kafka.simple.connection.Partition">
-				<constructor-arg index="0" value="kafka-source-test"/>
-				<constructor-arg index="1" value="0"/>
-			</bean>
-		</constructor-arg>
-		<constructor-arg index="3" value="-2"/>
+		<constructor-arg index="2" value="-2"/>
+	</bean>
+
+	<!--<bean id="messageProcessor" class="org.springframework.integration.kafka.simple.listener.BlockingQueueMessageProcessor">-->
+		<!--<constructor-arg index="0" value="100"/>-->
+		<!--<constructor-arg index="1" ref="offsetManager"/>-->
+		<!--<property name="messageListener">-->
+			<!--<bean class="org.springframework.integration.kafka.simpleconsumer.ChannelSendingMessageListener">-->
+				<!--<property name="channelName" value="input"/>-->
+			<!--</bean>-->
+		<!--</property>-->
+	<!--</bean>-->
+
+	<bean id="messageListener" class="org.springframework.integration.kafka.simpleconsumer.ChannelSendingMessageListener">
+		<property name="channelName" value="input"/>
+	</bean>
+
+	<bean id="kafkaMessageListener" class="org.springframework.integration.kafka.simple.listener.KafkaMessageListenerContainer">
+		<constructor-arg index="0" ref="connectionFactory"/>
+		<constructor-arg index="1" ref="offsetManager"/>
+		<constructor-arg index="2" ref="partitions"/>
 		<property name="clientId" value="fluffy"/>
-		<property name="messageListener">
-			<bean class="org.springframework.integration.kafka.simpleconsumer.ChannelSendingMessageListener">
-				<property name="channelName" value="input"/>
-			</bean>
-		</property>
+		<property name="messageListener" ref="messageListener"/>
 		<property name="timeout" value="10000"/>
 		<property name="maxSize" value="4000000"/>
 	</bean>

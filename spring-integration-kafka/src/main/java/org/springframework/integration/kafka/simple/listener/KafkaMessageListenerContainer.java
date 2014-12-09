@@ -18,19 +18,30 @@
 package org.springframework.integration.kafka.simple.listener;
 
 import java.util.HashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.gs.collections.api.block.function.Function;
+import com.gs.collections.api.block.function.Function0;
+import com.gs.collections.api.list.ListIterable;
+import com.gs.collections.impl.block.factory.Functions;
+import com.gs.collections.impl.block.function.checked.CheckedFunction;
+import com.gs.collections.impl.factory.Iterables;
+import com.gs.collections.impl.factory.Lists;
 import com.gs.collections.impl.list.mutable.FastList;
+import com.gs.collections.impl.map.mutable.UnifiedMap;
+import com.gs.collections.impl.utility.ArrayIterate;
+import com.gs.collections.impl.utility.ListIterate;
 
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
+import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
 import org.springframework.integration.kafka.simple.connection.Partition;
-import org.springframework.integration.kafka.simple.consumer.KafkaConfiguration;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageBatch;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
@@ -40,7 +51,7 @@ import org.springframework.integration.kafka.simple.template.KafkaTemplate;
 /**
  * @author Marius Bogoevici
  */
-public class KafkaMessageListenerContainer implements SmartLifecycle {
+public class KafkaMessageListenerContainer implements SmartLifecycle,InitializingBean {
 
 	private final KafkaTemplate kafkaTemplate;
 
@@ -50,31 +61,64 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 
 	private final AtomicBoolean running = new AtomicBoolean(false);
 
-	private final FastList<Partition> partitions;
-
-	private long referencePoint;
-
 	private long timeout = 100L;
 
 	private String clientId;
 
 	private int maxSize = 10000;
 
-	private MessageProcessor messageProcessor;
+	private int consumers = 1;
 
-	public KafkaMessageListenerContainer(KafkaConfiguration kafkaConfiguration, OffsetManager offsetManager, List<Partition> partitions, long referencePoint) {
-		this.referencePoint = referencePoint;
-		this.kafkaTemplate = new KafkaTemplate(kafkaConfiguration);
+	private Map<Partition, MessageProcessor> messageProcessors;
+
+	private MessageListener messageListener;
+
+	private KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory;
+
+	public KafkaMessageListenerContainer(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, final OffsetManager offsetManager, Partition[] partitions) {
+		this.kafkaBrokerConnectionFactory = kafkaBrokerConnectionFactory;
+		this.kafkaTemplate = new KafkaTemplate(kafkaBrokerConnectionFactory);
 		this.offsetManager = offsetManager;
-		this.partitions = FastList.newList(partitions);
+		this.consumerTaskExecutor = Executors.newFixedThreadPool(consumers);
 	}
 
-	public MessageProcessor getMessageProcessor() {
-		return messageProcessor;
+	public KafkaMessageListenerContainer(final KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, OffsetManager offsetManager, String[] topics) {
+		this(kafkaBrokerConnectionFactory, offsetManager, ArrayIterate.flatCollect(topics,new CheckedFunction<String, Iterable<Partition>>() {
+			@Override
+			public Iterable<Partition> safeValueOf(String topic) throws Exception {
+				return kafkaBrokerConnectionFactory.getPartitions(topic);
+			}
+		}).toArray(new Partition[0]));
 	}
 
-	public void setMessageProcessor(MessageProcessor messageProcessor) {
-		this.messageProcessor = messageProcessor;
+	@Override
+	public void afterPropertiesSet() throws Exception {
+		final UnifiedMap<Integer, MessageProcessor> messageProcessorAllocator = UnifiedMap.newMap();
+
+		messageProcessors = FastList.newList(this.kafkaBrokerConnectionFactory.getPartitions()).toMap(Functions.<Partition>getPassThru(), new Function<Partition, MessageProcessor>() {
+			private AtomicInteger atomicInteger = new AtomicInteger(0);
+
+			@Override
+			public MessageProcessor valueOf(Partition object) {
+				return messageProcessorAllocator.getIfAbsentPut(atomicInteger.getAndIncrement() % consumers, new Function0<MessageProcessor>() {
+					@Override
+					public MessageProcessor value() {
+						BlockingQueueMessageProcessor blockingQueueMessageProcessor = new BlockingQueueMessageProcessor(100, offsetManager);
+						blockingQueueMessageProcessor.setMessageListener(messageListener);
+						blockingQueueMessageProcessor.start();
+						return blockingQueueMessageProcessor;
+					}
+				});
+			}
+		});
+	}
+
+	public MessageListener getMessageListener() {
+		return messageListener;
+	}
+
+	public void setMessageListener(MessageListener messageListener) {
+		this.messageListener = messageListener;
 	}
 
 	@Override
@@ -90,7 +134,6 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	@Override
 	public void start() {
 		this.running.set(true);
-
 		for (KafkaBrokerConnection kafkaBrokerConnection : this.kafkaTemplate.getAllBrokers()) {
 			this.consumerTaskExecutor.execute(new FetchTask(FastList.newList(this.kafkaTemplate.getKafkaBrokerConnectionFactory().resolvePartitions(kafkaBrokerConnection.getBrokerAddress()))));
 		}
@@ -158,7 +201,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 					for (KafkaMessageBatch batch : receive) {
 						long highestOffset = 0;
 						for (KafkaMessage kafkaMessage : batch.getMessages()) {
-							messageProcessor.processMessage(kafkaMessage);
+							messageProcessors.get(kafkaMessage.getPartition()).processMessage(kafkaMessage);
 							highestOffset = Math.max(highestOffset, kafkaMessage.getNextOffset());
 						}
 						// if there are still messages on server, we can go on and retrieve more

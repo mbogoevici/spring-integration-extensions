@@ -15,7 +15,7 @@
  */
 
 
-package org.springframework.integration.kafka.simple.consumer;
+package org.springframework.integration.kafka.simple.connection;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -30,8 +30,6 @@ import org.springframework.integration.kafka.simple.connection.Partition;
  */
 public class KafkaConfiguration {
 
-	private String consumerId;
-
 	private List<KafkaBrokerAddress> brokerAddresses;
 
 	private List<Partition> partitions;
@@ -39,14 +37,6 @@ public class KafkaConfiguration {
 	public KafkaConfiguration(List<KafkaBrokerAddress> brokerAddresses, List<Partition> Partitions) {
 		this.brokerAddresses = brokerAddresses;
 		this.partitions = Partitions;
-	}
-
-	public String getConsumerId() {
-		return consumerId;
-	}
-
-	public void setConsumerId(String consumerId) {
-		this.consumerId = consumerId;
 	}
 
 	public List<KafkaBrokerAddress> getBrokerAddresses() {
