@@ -74,20 +74,13 @@ public class TestKafka {
 		@Override
 		protected void before() throws Throwable {
 			zookeeper = new EmbeddedZookeeper(TestZKUtils.zookeeperConnect());
-
 			int zkConnectionTimeout = 6000;
 			int zkSessionTimeout = 6000;
-
 			kafkaPort = TestUtils.choosePort();
 			Properties brokerConfig = TestUtils.createBrokerConfig(0, kafkaPort);
 			KafkaConfig kafkaConfig = new KafkaConfig(brokerConfig);
-
 			zkClient = new ZkClient(TestZKUtils.zookeeperConnect(), zkSessionTimeout, zkConnectionTimeout, ZKStringSerializer$.MODULE$);
-
 			server = TestUtils.createServer(kafkaConfig, SystemTime$.MODULE$);
-
-
-
 		}
 
 		@Override
@@ -110,9 +103,7 @@ public class TestKafka {
 	@Test
 	public void testFetchPartitionMetadata() throws Exception {
 		KafkaBrokerConnection brokerConnection = new KafkaBrokerConnection(new KafkaBrokerAddress(server.config().hostName(), server.config().port()));
-
 		KafkaResult<Long> result = brokerConnection.fetchInitialOffset(-1, new Partition(TEST_TOPIC, 0));
-
 		Assert.assertEquals(0, result.getErrors().size());
 		Assert.assertEquals(1, result.getResult().size());
 		Assert.assertEquals(0L,result.getResult().get(new Partition(TEST_TOPIC, 0)).longValue());
@@ -121,27 +112,22 @@ public class TestKafka {
 
 	@Test
 	public void testReceiveMessages() throws Exception {
-
 		StringEncoder encoder = new StringEncoder(new VerifiableProperties());
 		StringDecoder decoder = new StringDecoder();
 		Producer<String, String> producer = TestUtils.createProducer(server.config().hostName() + ":" + server.config().port(), encoder, encoder);
-
 		FastList<KeyedMessage<String, String>> keyedMessages = FastList.newListWith(new KeyedMessage<String, String>(TEST_TOPIC, "1", "Message 1"));
 		producer.send(JavaConversions.asScalaBuffer(keyedMessages).toSeq());
-
 		KafkaBrokerConnection brokerConnection = new KafkaBrokerConnection(new KafkaBrokerAddress(server.config().hostName(), server.config().port()));
-
 		Partition key = new Partition(TEST_TOPIC, 0);
 		KafkaMessageFetchRequest kafkaMessageFetchRequest = new KafkaMessageFetchRequest(key, 0L, 1000);
 		KafkaResult<KafkaMessageBatch> result = brokerConnection.fetch(kafkaMessageFetchRequest);
-
 		Assert.assertEquals(0, result.getErrors().size());
 		Assert.assertEquals(1, result.getResult().size());
 		Assert.assertEquals(1L,result.getResult().get(key).getHighWatermark());
 		for (KafkaMessage kafkaMessage : result.getResult().get(key).getMessages()) {
 			Assert.assertTrue(kafkaMessage.getMessage().hasKey());
 			byte[] dst = new byte[kafkaMessage.getMessage().payloadSize()];
-			ByteBuffer byteBuffer = kafkaMessage.getMessage().payload().get(dst);
+			kafkaMessage.getMessage().payload().get(dst);
 			Assert.assertEquals("Message 1", decoder.fromBytes(dst));
 		}
 
