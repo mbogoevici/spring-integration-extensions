@@ -18,26 +18,16 @@
 package org.springframework.integration.kafka.simple.listener;
 
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.gs.collections.api.block.function.Function;
-import com.gs.collections.api.block.function.Function0;
-import com.gs.collections.api.list.ListIterable;
-import com.gs.collections.impl.block.factory.Functions;
 import com.gs.collections.impl.block.function.checked.CheckedFunction;
-import com.gs.collections.impl.factory.Iterables;
-import com.gs.collections.impl.factory.Lists;
 import com.gs.collections.impl.list.mutable.FastList;
-import com.gs.collections.impl.map.mutable.UnifiedMap;
 import com.gs.collections.impl.utility.ArrayIterate;
-import com.gs.collections.impl.utility.ListIterate;
 
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
@@ -51,7 +41,7 @@ import org.springframework.integration.kafka.simple.template.KafkaTemplate;
 /**
  * @author Marius Bogoevici
  */
-public class KafkaMessageListenerContainer implements SmartLifecycle,InitializingBean {
+public class KafkaMessageListenerContainer implements SmartLifecycle {
 
 	private final KafkaTemplate kafkaTemplate;
 
@@ -67,19 +57,11 @@ public class KafkaMessageListenerContainer implements SmartLifecycle,Initializin
 
 	private int maxSize = 10000;
 
-	private int consumers = 1;
-
-	private Map<Partition, MessageProcessor> messageProcessors;
-
 	private MessageListener messageListener;
 
-	private KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory;
-
 	public KafkaMessageListenerContainer(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, final OffsetManager offsetManager, Partition[] partitions) {
-		this.kafkaBrokerConnectionFactory = kafkaBrokerConnectionFactory;
 		this.kafkaTemplate = new KafkaTemplate(kafkaBrokerConnectionFactory);
 		this.offsetManager = offsetManager;
-		this.consumerTaskExecutor = Executors.newFixedThreadPool(consumers);
 	}
 
 	public KafkaMessageListenerContainer(final KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, OffsetManager offsetManager, String[] topics) {
@@ -91,27 +73,6 @@ public class KafkaMessageListenerContainer implements SmartLifecycle,Initializin
 		}).toArray(new Partition[0]));
 	}
 
-	@Override
-	public void afterPropertiesSet() throws Exception {
-		final UnifiedMap<Integer, MessageProcessor> messageProcessorAllocator = UnifiedMap.newMap();
-
-		messageProcessors = FastList.newList(this.kafkaBrokerConnectionFactory.getPartitions()).toMap(Functions.<Partition>getPassThru(), new Function<Partition, MessageProcessor>() {
-			private AtomicInteger atomicInteger = new AtomicInteger(0);
-
-			@Override
-			public MessageProcessor valueOf(Partition object) {
-				return messageProcessorAllocator.getIfAbsentPut(atomicInteger.getAndIncrement() % consumers, new Function0<MessageProcessor>() {
-					@Override
-					public MessageProcessor value() {
-						BlockingQueueMessageProcessor blockingQueueMessageProcessor = new BlockingQueueMessageProcessor(100, offsetManager);
-						blockingQueueMessageProcessor.setMessageListener(messageListener);
-						blockingQueueMessageProcessor.start();
-						return blockingQueueMessageProcessor;
-					}
-				});
-			}
-		});
-	}
 
 	public MessageListener getMessageListener() {
 		return messageListener;
@@ -201,7 +162,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle,Initializin
 					for (KafkaMessageBatch batch : receive) {
 						long highestOffset = 0;
 						for (KafkaMessage kafkaMessage : batch.getMessages()) {
-							messageProcessors.get(kafkaMessage.getPartition()).processMessage(kafkaMessage);
+							messageListener.onMessage(kafkaMessage);
 							highestOffset = Math.max(highestOffset, kafkaMessage.getNextOffset());
 						}
 						// if there are still messages on server, we can go on and retrieve more

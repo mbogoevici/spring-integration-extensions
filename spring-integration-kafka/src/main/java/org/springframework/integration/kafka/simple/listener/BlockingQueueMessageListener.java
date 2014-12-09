@@ -30,27 +30,27 @@ import org.springframework.integration.kafka.simple.offset.OffsetManager;
 /**
  * @author Marius Bogoevici
  */
-public class BlockingQueueMessageProcessor implements MessageProcessor,Runnable,Lifecycle {
+public class BlockingQueueMessageListener implements MessageListener,Runnable,Lifecycle {
 
 	private BlockingQueue<KafkaMessage> messages;
 
 	private AtomicBoolean running = new AtomicBoolean(false);
 
-	private MessageListener messageListener;
+	private MessageListener delegate;
 
 	private OffsetManager offsetManager;
 
-	public MessageListener getMessageListener() {
-		return messageListener;
+	public MessageListener getDelegate() {
+		return delegate;
 	}
 
-	public void setMessageListener(MessageListener messageListener) {
-		this.messageListener = messageListener;
+	public void setDelegate(MessageListener delegate) {
+		this.delegate = delegate;
 	}
 
 	private Executor processingTaskExecutor = Executors.newSingleThreadExecutor();
 
-	public BlockingQueueMessageProcessor(int capacity, OffsetManager offsetManager) {
+	public BlockingQueueMessageListener(int capacity, OffsetManager offsetManager) {
 		this.offsetManager = offsetManager;
 		this.messages = new ArrayBlockingQueue<KafkaMessage>(capacity, true);
 	}
@@ -64,13 +64,13 @@ public class BlockingQueueMessageProcessor implements MessageProcessor,Runnable,
 	}
 
 	@Override
-	public void processMessage(KafkaMessage message) {
+	public void onMessage(KafkaMessage message) {
 		try {
 			this.messages.put(message);
 		}
 		catch (InterruptedException e) {
 			if (this.isRunning()) {
-				this.processMessage(message);
+				this.onMessage(message);
 			}
 		}
 	}
@@ -96,7 +96,7 @@ public class BlockingQueueMessageProcessor implements MessageProcessor,Runnable,
 		while(this.running.get()) {
 			try {
 				KafkaMessage nextMessage = this.getMessages().take();
-				messageListener.onMessage(nextMessage);
+				delegate.onMessage(nextMessage);
 				offsetManager.updateOffset(nextMessage.getPartition(), nextMessage.getNextOffset());
 			}
 			catch (InterruptedException e) {
