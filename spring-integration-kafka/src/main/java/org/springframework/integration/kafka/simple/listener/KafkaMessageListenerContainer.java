@@ -47,6 +47,8 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 
 	private final OffsetManager offsetManager;
 
+	private final Partition[] partitions;
+
 	private Executor consumerTaskExecutor = Executors.newSingleThreadExecutor();
 
 	private final AtomicBoolean running = new AtomicBoolean(false);
@@ -62,6 +64,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	public KafkaMessageListenerContainer(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, final OffsetManager offsetManager, Partition[] partitions) {
 		this.kafkaTemplate = new KafkaTemplate(kafkaBrokerConnectionFactory);
 		this.offsetManager = offsetManager;
+		this.partitions = partitions;
 	}
 
 	public KafkaMessageListenerContainer(final KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, OffsetManager offsetManager, String[] topics) {
