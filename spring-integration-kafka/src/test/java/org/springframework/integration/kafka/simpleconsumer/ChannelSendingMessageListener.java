@@ -20,7 +20,7 @@ package org.springframework.integration.kafka.simpleconsumer;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.integration.kafka.simple.model.KafkaMessage;
+import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
 import org.springframework.integration.kafka.simple.listener.MessageListener;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.integration.support.channel.BeanFactoryChannelResolver;
