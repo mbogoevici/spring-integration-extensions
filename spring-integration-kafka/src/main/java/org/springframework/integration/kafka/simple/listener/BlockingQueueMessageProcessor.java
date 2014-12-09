@@ -19,6 +19,8 @@ package org.springframework.integration.kafka.simple.listener;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.springframework.context.Lifecycle;
@@ -46,6 +48,8 @@ public class BlockingQueueMessageProcessor implements MessageProcessor,Runnable,
 		this.messageListener = messageListener;
 	}
 
+	private Executor processingTaskExecutor = Executors.newSingleThreadExecutor();
+
 	public BlockingQueueMessageProcessor(int capacity, OffsetManager offsetManager) {
 		this.offsetManager = offsetManager;
 		this.messages = new ArrayBlockingQueue<KafkaMessage>(capacity, true);
@@ -60,13 +64,21 @@ public class BlockingQueueMessageProcessor implements MessageProcessor,Runnable,
 	}
 
 	@Override
-	public void processMessage(KafkaMessage message) throws InterruptedException{
-		this.messages.put(message);
+	public void processMessage(KafkaMessage message) {
+		try {
+			this.messages.put(message);
+		}
+		catch (InterruptedException e) {
+			if (this.isRunning()) {
+				this.processMessage(message);
+			}
+		}
 	}
 
 	@Override
 	public void start() {
 		this.running.set(true);
+		this.processingTaskExecutor.execute(this);
 	}
 
 	@Override

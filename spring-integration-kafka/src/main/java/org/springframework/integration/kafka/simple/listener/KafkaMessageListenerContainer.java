@@ -18,20 +18,23 @@
 package org.springframework.integration.kafka.simple.listener;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.gs.collections.api.block.function.Function;
+import com.gs.collections.impl.list.mutable.FastList;
+
 import org.springframework.context.SmartLifecycle;
-import org.springframework.integration.kafka.simple.consumer.KafkaConfiguration;
-import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
-import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
 import org.springframework.integration.kafka.simple.connection.Partition;
-import org.springframework.integration.kafka.simple.offset.MetadataStoreOffsetManager;
+import org.springframework.integration.kafka.simple.consumer.KafkaConfiguration;
+import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
+import org.springframework.integration.kafka.simple.consumer.KafkaMessageBatch;
+import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
 import org.springframework.integration.kafka.simple.offset.OffsetManager;
 import org.springframework.integration.kafka.simple.template.KafkaTemplate;
-import org.springframework.integration.metadata.MetadataStore;
 
 /**
  * @author Marius Bogoevici
@@ -42,16 +45,12 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 
 	private final OffsetManager offsetManager;
 
-	private MessageListener messageListener;
-
 	private Executor consumerTaskExecutor = Executors.newSingleThreadExecutor();
 
-	private Executor processorTaskExecutor = Executors.newSingleThreadExecutor();
 
 	private final AtomicBoolean running = new AtomicBoolean(false);
 
-	private final Partition partition;
-
+	private final FastList<Partition> partitions;
 
 	private long referencePoint;
 
@@ -61,31 +60,22 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 
 	private int maxSize = 10000;
 
-	private BlockingQueueMessageProcessor messageProcessor;
+	private MessageProcessor messageProcessor;
 
-	public KafkaMessageListenerContainer(KafkaConfiguration kafkaConfiguration, MetadataStore metadataStore, Partition partition, long referencePoint) {
+	public KafkaMessageListenerContainer(KafkaConfiguration kafkaConfiguration, OffsetManager offsetManager, List<Partition> partitions, long referencePoint) {
 		this.referencePoint = referencePoint;
 		this.kafkaTemplate = new KafkaTemplate(kafkaConfiguration);
-		this.offsetManager = new MetadataStoreOffsetManager(kafkaConfiguration, kafkaTemplate.getKafkaBrokerConnectionFactory(), metadataStore, referencePoint);
-		this.partition  = partition;
+		this.offsetManager = offsetManager;
+		this.partitions = FastList.newList(partitions);
 	}
 
-	public MessageListener getMessageListener() {
-		return messageListener;
+	public MessageProcessor getMessageProcessor() {
+		return messageProcessor;
 	}
 
-	public void setMessageListener(MessageListener messageListener) {
-		this.messageListener = messageListener;
+	public void setMessageProcessor(MessageProcessor messageProcessor) {
+		this.messageProcessor = messageProcessor;
 	}
-
-	public Executor getTaskExecutor() {
-		return consumerTaskExecutor;
-	}
-
-	public void setTaskExecutor(Executor taskExecutor) {
-		this.consumerTaskExecutor = taskExecutor;
-	}
-
 
 	@Override
 	public boolean isAutoStartup() {
@@ -101,10 +91,6 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	public void start() {
 		this.running.set(true);
 		this.consumerTaskExecutor.execute(new FetchTask());
-		messageProcessor = new BlockingQueueMessageProcessor(10, offsetManager);
-		messageProcessor.setMessageListener(messageListener);
-		messageProcessor.start();
-		this.processorTaskExecutor.execute(messageProcessor);
 	}
 
 	@Override
@@ -150,33 +136,27 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 		@Override
 		public void run() {
 			KafkaMessageListenerContainer kafkaMessageListenerContainer = KafkaMessageListenerContainer.this;
-			while(running.get()) {
-				Set<Partition> partitionsWithData = new HashSet<Partition>();
+			while (running.get()) {
+				Set<Partition> partitionsWithRemainingData = new HashSet<Partition>();
 				do {
-					partitionsWithData.add(partition);
-					Iterable<KafkaMessage> receive = kafkaTemplate.receive(new KafkaMessageFetchRequest(partition, offsetManager.getOffset(partition), maxSize));
-					boolean hasData = false;
-					for (KafkaMessage message : receive) {
-						try {
-							messageProcessor.processMessage(message);
+					Iterable<KafkaMessageBatch> receive = kafkaTemplate.receive(partitions.collect(new Function<Partition, KafkaMessageFetchRequest>() {
+						@Override
+						public KafkaMessageFetchRequest valueOf(Partition partition) {
+							return new KafkaMessageFetchRequest(partition, offsetManager.getOffset(partition), maxSize);
 						}
-						catch (InterruptedException e) {
-							Thread.currentThread().interrupt();
-							if (!kafkaMessageListenerContainer.running.get()) {
-								// no longer running
-								return;
-							}
-							throw new IllegalStateException(e);
+					}).toTypedArray(KafkaMessageFetchRequest.class));
+					for (KafkaMessageBatch batch : receive) {
+						long highestOffset = 0;
+						for (KafkaMessage kafkaMessage : batch.getMessages()) {
+							messageProcessor.processMessage(kafkaMessage);
+							highestOffset = Math.max(highestOffset, kafkaMessage.getNextOffset());
 						}
-						if (message.getHighWaterMark() == message.getNextOffset()) {
-							partitionsWithData.remove(partition);
+						// if there are still messages on server, we can go on and retrieve more
+						if (highestOffset < batch.getHighWatermark()) {
+							partitionsWithRemainingData.add(batch.getPartition());
 						}
-						hasData = true;
 					}
-					if (!hasData) {
-						partitionsWithData.remove(partition);
-					}
-				} while (!partitionsWithData.isEmpty());
+				} while (!partitionsWithRemainingData.isEmpty());
 				try {
 					Thread.currentThread().sleep(timeout);
 				}

@@ -18,6 +18,7 @@
 package org.springframework.integration.kafka.simple.template;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -62,7 +63,7 @@ public class KafkaTemplate {
 		return kafkaBrokerConnectionFactory;
 	}
 
-	public List<KafkaMessage> receive(KafkaBrokerAddress kafkaBrokerAddress, final Map<Partition, Offset> offsets, final int maxSize) {
+	public List<KafkaMessageBatch> receive(KafkaBrokerAddress kafkaBrokerAddress, final Map<Partition, Offset> offsets, final int maxSize) {
 		return this.receive(FastList.newList(kafkaBrokerConnectionFactory.resolvePartitions(kafkaBrokerAddress)).collect(new Function<Partition, KafkaMessageFetchRequest>() {
 			@Override
 			public KafkaMessageFetchRequest valueOf(Partition partition) {
@@ -71,7 +72,7 @@ public class KafkaTemplate {
 		}).toTypedArray(KafkaMessageFetchRequest.class));
 	}
 
-	public List<KafkaMessage> receive(KafkaMessageFetchRequest... messageFetchRequests) {
+	public List<KafkaMessageBatch> receive(KafkaMessageFetchRequest... messageFetchRequests) {
 		MutableList<KafkaBrokerAddress> distinctBrokerAddresses = ArrayIterate.collect(messageFetchRequests, new Function<KafkaMessageFetchRequest, KafkaBrokerAddress>() {
 			@Override
 			public KafkaBrokerAddress valueOf(KafkaMessageFetchRequest fetchRequest) {
@@ -86,17 +87,7 @@ public class KafkaTemplate {
 			// synchronously refresh on error
 			kafkaBrokerConnectionFactory.refresh();
 		}
-		return FastList.newList(fetch.getResult().entrySet()).flatCollect(new Function<Map.Entry<Partition, KafkaMessageBatch>, Iterable<KafkaMessage>>() {
-			@Override
-			public Iterable<KafkaMessage> valueOf(final Map.Entry<Partition, KafkaMessageBatch> mapEntry) {
-				return LazyIterate.collect(mapEntry.getValue().getMessageSet(), new Function<MessageAndOffset, KafkaMessage>() {
-					@Override
-					public KafkaMessage valueOf(MessageAndOffset object) {
-						return new KafkaMessage(object.message(), object.offset(), object.nextOffset(), mapEntry.getValue().getHighWatermark(), mapEntry.getKey());
-					}
-				});
-			}
-		});
+		return new ArrayList<KafkaMessageBatch>(fetch.getResult().values());
 	}
 
 }

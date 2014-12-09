@@ -17,6 +17,8 @@
 
 package org.springframework.integration.kafka.simple.consumer;
 
+import java.util.List;
+
 import kafka.javaapi.message.MessageSet;
 
 import org.springframework.integration.kafka.simple.connection.Partition;
@@ -28,13 +30,13 @@ public class KafkaMessageBatch {
 
 	private Partition partition;
 
-	private MessageSet messageSet;
+	private List<KafkaMessage> messages;
 
 	private long highWatermark;
 
-	public KafkaMessageBatch(Partition partition, MessageSet messageSet, long highWatermark) {
+	public KafkaMessageBatch(Partition partition, List<KafkaMessage> messages, long highWatermark) {
 		this.partition = partition;
-		this.messageSet = messageSet;
+		this.messages = messages;
 		this.highWatermark = highWatermark;
 	}
 
@@ -46,12 +48,12 @@ public class KafkaMessageBatch {
 		this.partition = partition;
 	}
 
-	public MessageSet getMessageSet() {
-		return messageSet;
+	public List<KafkaMessage> getMessages() {
+		return messages;
 	}
 
-	public void setMessageSet(MessageSet messageSet) {
-		this.messageSet = messageSet;
+	public void setMessages(List<KafkaMessage> messages) {
+		this.messages = messages;
 	}
 
 	public long getHighWatermark() {

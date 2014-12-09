@@ -24,5 +24,5 @@ import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
  */
 public interface MessageProcessor {
 
-	void processMessage(KafkaMessage message) throws InterruptedException;
+	void processMessage(KafkaMessage message);
 }
