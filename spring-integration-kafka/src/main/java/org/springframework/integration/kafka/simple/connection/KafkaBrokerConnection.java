@@ -46,6 +46,9 @@ import kafka.javaapi.TopicMetadataRequest;
 import kafka.javaapi.TopicMetadataResponse;
 import kafka.javaapi.consumer.SimpleConsumer;
 import kafka.message.MessageAndOffset;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageBatch;
@@ -59,6 +62,8 @@ import org.springframework.util.Assert;
  * @author Marius Bogoevici
  */
 public class KafkaBrokerConnection {
+
+	private static Log LOGGER = LogFactory.getLog(KafkaBrokerConnection.class);
 
 	public static final String DEFAULT_CLIENT_ID = "spring.kafka";
 
@@ -111,7 +116,9 @@ public class KafkaBrokerConnection {
 		FetchResponse fetchResponse = this.simpleConsumer.fetch(fetchRequestBuilder.build());
 		KafkaResultBuilder<KafkaMessageBatch> kafkaResultBuilder = new KafkaResultBuilder<KafkaMessageBatch>();
 		for (final KafkaMessageFetchRequest kafkaMessageFetchRequest : requests) {
-			System.out.println("Reading from " + kafkaMessageFetchRequest.getPartition() + "@" + kafkaMessageFetchRequest.getOffset());
+			if (LOGGER.isDebugEnabled()) {
+				LOGGER.debug("Reading from " + kafkaMessageFetchRequest.getPartition() + "@" + kafkaMessageFetchRequest.getOffset());
+			}
 			short errorCode = fetchResponse.errorCode(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber());
 			if (ErrorMapping.NoError() == errorCode) {
 				List<KafkaMessage> kafkaMessages = LazyIterate.collect(fetchResponse.messageSet(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getNumber()), new Function<MessageAndOffset, KafkaMessage>() {
