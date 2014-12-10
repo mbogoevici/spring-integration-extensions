@@ -25,7 +25,7 @@ import java.util.Map;
  *
  * @author Marius Bogoevici
  */
-public class KafkaResultBuilder<T> {
+class KafkaResultBuilder<T> {
 
 	private Map<Partition, T> result;
 
