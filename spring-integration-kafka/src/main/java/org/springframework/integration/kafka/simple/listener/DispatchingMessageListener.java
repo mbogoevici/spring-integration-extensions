@@ -137,6 +137,7 @@ public class DispatchingMessageListener implements MessageListener, Initializing
 
 	@Override
 	public void onMessage(KafkaMessage message) {
+		this.offsetManager.updateOffset(message.getPartition(), message.getNextOffset());
 		delegates.get(message.getPartition()).onMessage(message);
 	}
 }

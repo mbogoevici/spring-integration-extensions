@@ -18,7 +18,10 @@
 package org.springframework.integration.kafka.simple.listener;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -29,6 +32,7 @@ import com.gs.collections.api.block.procedure.Procedure2;
 import com.gs.collections.api.list.ImmutableList;
 import com.gs.collections.api.list.MutableList;
 import com.gs.collections.api.multimap.list.ImmutableListMultimap;
+import com.gs.collections.impl.block.factory.Functions;
 import com.gs.collections.impl.block.function.checked.CheckedFunction;
 import com.gs.collections.impl.factory.Lists;
 import com.gs.collections.impl.utility.ArrayIterate;
@@ -64,14 +68,19 @@ public class KafkaMessageListenerContainer implements InitializingBean,SmartLife
 
 	private MessageListener messageListener;
 
-	private OffsetManager offsetManager;
+	private ConcurrentMap<Partition, Long> nextFetchOffsets;
 
-	public KafkaMessageListenerContainer(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, OffsetManager offsetManager, Partition[] partitions) {
+	public KafkaMessageListenerContainer(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, final OffsetManager offsetManager, Partition[] partitions) {
 		Assert.notNull(kafkaBrokerConnectionFactory, "A connection factory must be supplied");
 		Assert.notEmpty(partitions, "A list of partitions must be provided");
 		this.kafkaTemplate = new KafkaTemplate(kafkaBrokerConnectionFactory);
-		this.offsetManager = offsetManager;
 		this.partitions = Lists.immutable.with(partitions);
+		this.nextFetchOffsets = new ConcurrentHashMap<Partition, Long>(this.partitions.toMap(Functions.<Partition>getPassThru(), new CheckedFunction<Partition, Long>() {
+			@Override
+			public Long safeValueOf(Partition object) throws Exception {
+				return offsetManager.getOffset(object);
+			}
+		}));
 	}
 
 	public KafkaMessageListenerContainer(final KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, OffsetManager offsetManager, String[] topics) {
@@ -176,17 +185,18 @@ public class KafkaMessageListenerContainer implements InitializingBean,SmartLife
 					Iterable<KafkaMessageBatch> receive = kafkaTemplate.receive(this.partitions.collect(new Function<Partition, KafkaMessageFetchRequest>() {
 						@Override
 						public KafkaMessageFetchRequest valueOf(Partition partition) {
-							return new KafkaMessageFetchRequest(partition, offsetManager.getOffset(partition), maxSize);
+							return new KafkaMessageFetchRequest(partition, nextFetchOffsets.get(partition), maxSize);
 						}
 					}).toArray(new KafkaMessageFetchRequest[0]));
 					for (KafkaMessageBatch batch : receive) {
-						long highestOffset = 0;
+						long highestFetchedOffset = 0;
 						for (KafkaMessage kafkaMessage : batch.getMessages()) {
 							messageListener.onMessage(kafkaMessage);
-							highestOffset = Math.max(highestOffset, kafkaMessage.getNextOffset());
+							highestFetchedOffset = Math.max(highestFetchedOffset, kafkaMessage.getNextOffset());
 						}
+						nextFetchOffsets.replace(batch.getPartition(), highestFetchedOffset);
 						// if there are still messages on server, we can go on and retrieve more
-						if (highestOffset < batch.getHighWatermark()) {
+						if (highestFetchedOffset < batch.getHighWatermark()) {
 							partitionsWithRemainingData.add(batch.getPartition());
 						}
 					}
