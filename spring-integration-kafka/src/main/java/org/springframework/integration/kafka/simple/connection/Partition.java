@@ -49,14 +49,19 @@ public class Partition {
 
 	@Override
 	public boolean equals(Object o) {
-		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
-
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
 		Partition partition = (Partition) o;
-
-		if (number != partition.number) return false;
-		if (!topic.equals(partition.topic)) return false;
-
+		if (number != partition.number) {
+			return false;
+		}
+		if (!topic.equals(partition.topic)) {
+			return false;
+		}
 		return true;
 	}
 
