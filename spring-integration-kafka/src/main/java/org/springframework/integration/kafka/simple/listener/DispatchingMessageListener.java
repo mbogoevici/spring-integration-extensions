@@ -55,6 +55,8 @@ public class DispatchingMessageListener implements MessageListener, Initializing
 
 	private Executor taskExecutor = Executors.newCachedThreadPool();
 
+	private ErrorHandler errorHandler = new LoggingErrorHandler();
+
 	public DispatchingMessageListener(Partition[] partitions, int consumers, OffsetManager offsetManager) {
 		Assert.notEmpty(partitions, "A set of partitions must be provided");
 		Assert.isTrue(consumers <= partitions.length, "Consumers must be fewer than partitions");
@@ -69,6 +71,15 @@ public class DispatchingMessageListener implements MessageListener, Initializing
 
 	public void setDelegateListener(MessageListener delegate) {
 		this.delegateListener = delegate;
+	}
+
+
+	public ErrorHandler getErrorHandler() {
+		return errorHandler;
+	}
+
+	public void setErrorHandler(ErrorHandler errorHandler) {
+		this.errorHandler = errorHandler;
 	}
 
 	public OffsetManager getOffsetManager() {
@@ -137,7 +148,13 @@ public class DispatchingMessageListener implements MessageListener, Initializing
 
 	@Override
 	public void onMessage(KafkaMessage message) {
-		this.offsetManager.updateOffset(message.getPartition(), message.getNextOffset());
-		delegates.get(message.getPartition()).onMessage(message);
+		try {
+			delegates.get(message.getPartition()).onMessage(message);
+			this.offsetManager.updateOffset(message.getPartition(), message.getNextOffset());
+		}
+		catch (Exception e) {
+			errorHandler.handleError(e);
+		}
 	}
+
 }
