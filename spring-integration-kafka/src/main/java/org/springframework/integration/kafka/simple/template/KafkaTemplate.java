@@ -47,10 +47,6 @@ public class KafkaTemplate {
 		this.kafkaBrokerConnectionFactory = kafkaBrokerConnectionFactory;
 	}
 
-	public List<KafkaBrokerConnection> getAllBrokers() {
-		return new ArrayList<KafkaBrokerConnection>(kafkaBrokerConnectionFactory.resolveBrokers(kafkaBrokerConnectionFactory.getPartitions()).values());
-	}
-
 	public KafkaBrokerConnectionFactory getKafkaBrokerConnectionFactory() {
 		return kafkaBrokerConnectionFactory;
 	}
@@ -68,7 +64,7 @@ public class KafkaTemplate {
 		MutableList<KafkaBrokerAddress> distinctBrokerAddresses = ArrayIterate.collect(messageFetchRequests, new Function<KafkaMessageFetchRequest, KafkaBrokerAddress>() {
 			@Override
 			public KafkaBrokerAddress valueOf(KafkaMessageFetchRequest fetchRequest) {
-				return kafkaBrokerConnectionFactory.getLeaderConnection(fetchRequest.getPartition()).getBrokerAddress();
+				return kafkaBrokerConnectionFactory.getLeader(fetchRequest.getPartition());
 			}
 		}).distinct();
 		if (distinctBrokerAddresses.size() != 1) {

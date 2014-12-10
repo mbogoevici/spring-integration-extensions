@@ -124,7 +124,7 @@ public class KafkaMessageListenerContainer implements InitializingBean,SmartLife
 		ImmutableListMultimap<KafkaBrokerAddress, Partition> partitionsByBroker = this.partitions.groupBy(new Function<Partition, KafkaBrokerAddress>() {
 			@Override
 			public KafkaBrokerAddress valueOf(Partition partition) {
-				return kafkaTemplate.getKafkaBrokerConnectionFactory().getLeaderConnection(partition).getBrokerAddress();
+				return kafkaTemplate.getKafkaBrokerConnectionFactory().getLeader(partition);
 			}
 		});
 

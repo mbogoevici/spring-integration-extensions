@@ -66,33 +66,25 @@ public class KafkaBrokerConnectionFactory implements InitializingBean {
 		this.refreshLeaders();
 	}
 
-	/**
-	 * Resolves the broker associated with a specific topic and partition. Internally,
-	 * caches the {@link KafkaBrokerConnection}
-	 *
-	 * @param partition
-	 * @return the broker associated with the provided topic and partition
-	 */
-	public KafkaBrokerConnection getLeaderConnection(Partition partition) {
-		KafkaBrokerAddress kafkaBrokerAddress = partitionBrokerMapReference.get().getBrokersByPartition().get(partition);
-		return createConnection(kafkaBrokerAddress);
-	}
-
 
 	/**
 	 * Resolves the broker associated with a specific topic and partition. Internally,
 	 * caches the {@link KafkaBrokerConnection}
 	 *
-	 * @param topicsAndPartitions
+	 * @param partitions
 	 * @return the broker associated with the provided topic and partition
 	 */
-	public Map<Partition, KafkaBrokerConnection> resolveBrokers(final Collection<Partition> topicsAndPartitions) {
-		return FastList.newList(topicsAndPartitions).toMap(Functions.<Partition>getPassThru(), new Function<Partition, KafkaBrokerConnection>() {
+	public Map<Partition, KafkaBrokerAddress> getLeaders(Partition... partitions) {
+		return FastList.newListWith(partitions).toMap(Functions.<Partition>getPassThru(), new Function<Partition, KafkaBrokerAddress>() {
 			@Override
-			public KafkaBrokerConnection valueOf(Partition partition) {
-				return getLeaderConnection(partition);
+			public KafkaBrokerAddress valueOf(Partition partition) {
+				return partitionBrokerMapReference.get().getBrokersByPartition().get(partition);
 			}
 		});
+	}
+
+	public KafkaBrokerAddress getLeader(Partition partition) {
+		return partitionBrokerMapReference.get().getBrokersByPartition().get(partition);
 	}
 
 	public List<Partition> getPartitions(KafkaBrokerAddress kafkaBrokerAddress) {
