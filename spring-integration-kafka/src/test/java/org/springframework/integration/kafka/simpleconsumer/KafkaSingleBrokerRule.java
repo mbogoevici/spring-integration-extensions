@@ -44,14 +44,9 @@ public class KafkaSingleBrokerRule extends ExternalResource {
 
 	private KafkaServer kafkaServer;
 
-	private static EmbeddedZookeeper zookeeper;
+	private EmbeddedZookeeper zookeeper;
 
-	private static ZkClient zookeeperClient;
-
-	public static Producer<String, String> createStringProducer() {
-		StringEncoder encoder = new StringEncoder(new VerifiableProperties());
-		return TestUtils.createProducer(TestKafkaBrokerConnection.kafkaRule.getKafkaServer().config().hostName() + ":" + TestKafkaBrokerConnection.kafkaRule.getKafkaServer().config().port(), encoder, encoder);
-	}
+	private ZkClient zookeeperClient;
 
 	@Override
 	protected void before() throws Throwable {

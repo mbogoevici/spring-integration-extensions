@@ -44,25 +44,12 @@ import org.springframework.integration.kafka.simple.connection.Partition;
 /**
  * @author Marius Bogoevici
  */
-public class TestKafkaConnectionFactory {
-
-	public static final String TEST_TOPIC = "test-topic";
-
-	@ClassRule
-	public static KafkaSingleBrokerRule kafkaRule = new KafkaSingleBrokerRule();
-
-	@BeforeClass
-	public static void setUp() throws Exception {
-		AdminUtils.createTopic(kafkaRule.getZookeeperClient(), TEST_TOPIC, 1, 1, new Properties());
-		TestUtils.waitUntilMetadataIsPropagated(JavaConversions.asScalaBuffer(Collections.singletonList(kafkaRule.getKafkaServer())), TEST_TOPIC, 0, 5000L);
-		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 0, 5000L, Option.empty());
-	}
+public class TestKafkaConnectionFactory extends AbstractSingleBrokerTest {
 
 	@Test
 	public void testCreateConnectionFactory() throws Exception {
 		List<KafkaBrokerAddress> brokerAddresses = Collections.singletonList(kafkaRule.getBrokerAddress());
 		Partition partition = new Partition(TEST_TOPIC, 0);
-		List<Partition> partitions = Collections.singletonList(partition);
 		KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory = new KafkaBrokerConnectionFactory(new KafkaConfiguration(brokerAddresses));
 		kafkaBrokerConnectionFactory.afterPropertiesSet();
 		KafkaBrokerConnection connection = kafkaBrokerConnectionFactory.createConnection(kafkaRule.getBrokerAddress());

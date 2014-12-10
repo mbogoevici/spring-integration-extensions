@@ -17,21 +17,12 @@
 
 package org.springframework.integration.kafka.simpleconsumer;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Properties;
 
-import com.gs.collections.impl.list.mutable.FastList;
 import junit.framework.Assert;
-import kafka.admin.AdminUtils;
 import kafka.producer.KeyedMessage;
 import kafka.producer.Producer;
-import kafka.utils.TestUtils;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
 import org.junit.Test;
-import scala.Option;
 import scala.collection.JavaConversions;
 
 import org.springframework.integration.kafka.serializer.common.StringDecoder;
@@ -46,19 +37,7 @@ import org.springframework.integration.kafka.simple.util.MessageUtils;
 /**
  * @author Marius Bogoevici
  */
-public class TestKafkaBrokerConnection {
-
-	public static final String TEST_TOPIC = "test-topic";
-
-	@ClassRule
-	public static KafkaSingleBrokerRule kafkaRule = new KafkaSingleBrokerRule();
-
-	@BeforeClass
-	public static void setUp() throws Exception {
-		AdminUtils.createTopic(kafkaRule.getZookeeperClient(), TEST_TOPIC, 1, 1, new Properties());
-		TestUtils.waitUntilMetadataIsPropagated(JavaConversions.asScalaBuffer(Collections.singletonList(kafkaRule.getKafkaServer())), TEST_TOPIC, 0, 5000L);
-		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 0, 5000L, Option.empty());
-	}
+public class TestKafkaBrokerConnection extends AbstractSingleBrokerTest {
 
 	@Test
 	public void testFetchPartitionMetadata() throws Exception {
@@ -72,7 +51,7 @@ public class TestKafkaBrokerConnection {
 
 	@Test
 	public void testReceiveMessages() throws Exception {
-		Producer<String, String> producer = KafkaSingleBrokerRule.createStringProducer();
+		Producer<String, String> producer = createStringProducer();
 		List<KeyedMessage<String, String>> keyedMessages = createMessages(10);
 		producer.send(JavaConversions.asScalaBuffer(keyedMessages).toSeq());
 		KafkaBrokerConnection brokerConnection = new KafkaBrokerConnection(kafkaRule.getBrokerAddress());
@@ -90,14 +69,6 @@ public class TestKafkaBrokerConnection {
 			Assert.assertEquals("Message " + i, MessageUtils.decodePayload(kafkaMessage, decoder));
 			i++;
 		}
-	}
-
-	public List<KeyedMessage<String, String>> createMessages(int count) {
-		List<KeyedMessage<String,String>> messages = new ArrayList<KeyedMessage<String, String>>();
-		for (int i=0; i<count; i++) {
-			messages.add(new KeyedMessage<String, String>(TEST_TOPIC, "Key " + i, "Message " + i));
-		}
-		return messages;
 	}
 
 }
