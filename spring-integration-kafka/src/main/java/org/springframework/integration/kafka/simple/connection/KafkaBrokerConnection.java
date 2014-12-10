@@ -26,8 +26,12 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.gs.collections.api.block.function.Function;
+import com.gs.collections.api.block.function.Function2;
+import com.gs.collections.api.tuple.Pair;
 import com.gs.collections.impl.list.mutable.FastList;
+import com.gs.collections.impl.tuple.Tuples;
 import com.gs.collections.impl.utility.LazyIterate;
+import com.gs.collections.impl.utility.MapIterate;
 import kafka.api.FetchRequestBuilder;
 import kafka.api.PartitionOffsetRequestInfo;
 import kafka.common.ErrorMapping;
@@ -48,12 +52,10 @@ import kafka.javaapi.consumer.SimpleConsumer;
 import kafka.message.MessageAndOffset;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.log4j.Logger;
 
 import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageBatch;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
-import org.springframework.integration.kafka.simple.offset.Offset;
 import org.springframework.util.Assert;
 
 /**
@@ -184,16 +186,17 @@ public class KafkaBrokerConnection {
 		return kafkaResultBuilder.build();
 	}
 
-	public KafkaResult<Void> commitOffsets(Offset... offsets) {
-		Map<TopicAndPartition, OffsetMetadataAndError> requestInfo = new HashMap<TopicAndPartition, OffsetMetadataAndError>();
-		for (Offset offset : offsets) {
-			Partition partition = offset.getPartition();
-			requestInfo.put(
-					new TopicAndPartition(partition.getTopic(), partition.getNumber()),
-					new OffsetMetadataAndError(offset.getOffset(), OffsetMetadataAndError.NoMetadata(), ErrorMapping.NoError()));
-		}
+	public KafkaResult<Void> commitOffsetsForConsumer(String consumerId, Map<Partition, Long> offsets) {
+		Map<TopicAndPartition, OffsetMetadataAndError> requestInfo = MapIterate.collect(offsets, new Function2<Partition, Long, Pair<TopicAndPartition, OffsetMetadataAndError>>() {
+			@Override
+			public Pair<TopicAndPartition, OffsetMetadataAndError> value(Partition partition, Long offset) {
+				return Tuples.pair(
+						new TopicAndPartition(partition.getTopic(),
+						partition.getNumber()),new OffsetMetadataAndError(offset, OffsetMetadataAndError.NoMetadata(), ErrorMapping.NoError()));
+			}
+		});
 		OffsetCommitResponse offsetCommitResponse = simpleConsumer.commitOffsets(
-				new OffsetCommitRequest(simpleConsumer.clientId(), requestInfo, kafka.api.OffsetCommitRequest.CurrentVersion(), createCorrelationId(), simpleConsumer.clientId()));
+				new OffsetCommitRequest(consumerId, requestInfo, kafka.api.OffsetCommitRequest.CurrentVersion(), createCorrelationId(), simpleConsumer.clientId()));
 		KafkaResultBuilder<Void> kafkaResultBuilder = new KafkaResultBuilder<Void>();
 		for (TopicAndPartition topicAndPartition : requestInfo.keySet()) {
 			if (offsetCommitResponse.errors().containsKey(topicAndPartition)) {

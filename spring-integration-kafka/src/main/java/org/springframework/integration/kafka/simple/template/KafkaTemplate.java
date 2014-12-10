@@ -26,13 +26,11 @@ import com.gs.collections.api.list.MutableList;
 import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.utility.ArrayIterate;
 
-import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
 import org.springframework.integration.kafka.simple.connection.KafkaResult;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerAddress;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageBatch;
-import org.springframework.integration.kafka.simple.offset.Offset;
 import org.springframework.integration.kafka.simple.connection.Partition;
 
 
@@ -51,11 +49,11 @@ public class KafkaTemplate {
 		return kafkaBrokerConnectionFactory;
 	}
 
-	public List<KafkaMessageBatch> receive(KafkaBrokerAddress kafkaBrokerAddress, final Map<Partition, Offset> offsets, final int maxSize) {
+	public List<KafkaMessageBatch> receive(KafkaBrokerAddress kafkaBrokerAddress, final Map<Partition, Long> offsets, final int maxSize) {
 		return this.receive(FastList.newList(kafkaBrokerConnectionFactory.getPartitions(kafkaBrokerAddress)).collect(new Function<Partition, KafkaMessageFetchRequest>() {
 			@Override
 			public KafkaMessageFetchRequest valueOf(Partition partition) {
-				return new KafkaMessageFetchRequest(partition, offsets.get(partition).getOffset(), maxSize);
+				return new KafkaMessageFetchRequest(partition, offsets.get(partition), maxSize);
 			}
 		}).toTypedArray(KafkaMessageFetchRequest.class));
 	}

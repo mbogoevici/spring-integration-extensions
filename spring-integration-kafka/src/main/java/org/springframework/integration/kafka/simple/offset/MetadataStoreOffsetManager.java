@@ -25,11 +25,13 @@ import com.gs.collections.impl.map.mutable.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
 import org.springframework.integration.kafka.simple.connection.KafkaResult;
 import org.springframework.integration.kafka.simple.connection.Partition;
 import org.springframework.integration.metadata.MetadataStore;
+import org.springframework.integration.metadata.SimpleMetadataStore;
 
 /**
  * An {@link org.springframework.integration.kafka.simple.offset.OffsetManager} that persists offsets into
@@ -37,25 +39,52 @@ import org.springframework.integration.metadata.MetadataStore;
  *
  * @author Marius Bogoevici
  */
-public class MetadataStoreOffsetManager implements OffsetManager {
+public class MetadataStoreOffsetManager implements OffsetManager, InitializingBean {
 
 	private final static Log LOG = LogFactory.getLog(MetadataStoreOffsetManager.class);
-	private MetadataStore metadataStore;
+
+	private String consumerId = "spring.kafka";
+
+	private MetadataStore metadataStore = new SimpleMetadataStore();
 
 	private KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory;
 
-	private long referencePoint;
+	private long referenceTimestamp = -2;
 
 	private MutableMap<Partition, Long> offsets = new ConcurrentHashMap<Partition, Long>();
 
-	public MetadataStoreOffsetManager(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, MetadataStore metadataStore, long referencePoint) {
-		this.metadataStore = metadataStore;
+	public MetadataStoreOffsetManager(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory) {
 		this.kafkaBrokerConnectionFactory = kafkaBrokerConnectionFactory;
-		this.referencePoint = referencePoint;
-		this.offsets = new ConcurrentHashMap<Partition, Long>();
-		loadOffsets();
 	}
 
+	public String getConsumerId() {
+		return consumerId;
+	}
+
+	public void setConsumerId(String consumerId) {
+		this.consumerId = consumerId;
+	}
+
+	public MetadataStore getMetadataStore() {
+		return metadataStore;
+	}
+
+	public void setMetadataStore(MetadataStore metadataStore) {
+		this.metadataStore = metadataStore;
+	}
+
+	public long getReferenceTimestamp() {
+		return referenceTimestamp;
+	}
+
+	public void setReferenceTimestamp(long referenceTimestamp) {
+		this.referenceTimestamp = referenceTimestamp;
+	}
+
+	@Override
+	public void afterPropertiesSet() throws Exception {
+		loadOffsets();
+	}
 
 	@Override
 	public void updateOffset(Partition partition, long offset) {
@@ -69,6 +98,7 @@ public class MetadataStoreOffsetManager implements OffsetManager {
 	}
 
 	private void loadOffsets() {
+		this.offsets = new ConcurrentHashMap<Partition, Long>();
 		KafkaBrokerConnection kafkaBrokerConnection = kafkaBrokerConnectionFactory.createConnection(kafkaBrokerConnectionFactory.getBrokerAddresses().get(0));
 		List<Partition> partitionsRequiringInitialOffsets = new ArrayList<Partition>();
 		for (Partition partition : kafkaBrokerConnectionFactory.getPartitions()) {
@@ -89,7 +119,7 @@ public class MetadataStoreOffsetManager implements OffsetManager {
 			}
  		}
 		if (partitionsRequiringInitialOffsets.size() > 0) {
-			KafkaResult<Long> initialOffsets = kafkaBrokerConnection.fetchInitialOffset(referencePoint, partitionsRequiringInitialOffsets.toArray(new Partition[partitionsRequiringInitialOffsets.size()]));
+			KafkaResult<Long> initialOffsets = kafkaBrokerConnection.fetchInitialOffset(referenceTimestamp, partitionsRequiringInitialOffsets.toArray(new Partition[partitionsRequiringInitialOffsets.size()]));
 			if (initialOffsets.getErrors().size() == 0) {
 				for (Partition partitionsRequiringInitialOffset : partitionsRequiringInitialOffsets) {
 					offsets.put(partitionsRequiringInitialOffset, initialOffsets.getResult().get(partitionsRequiringInitialOffset));
@@ -101,6 +131,6 @@ public class MetadataStoreOffsetManager implements OffsetManager {
 	}
 
 	private String asKey(Partition partition) {
-		return partition.getNumber() + " " + partition.getTopic();
+		return partition.getTopic() + " " + partition.getNumber() + " " + consumerId;
 	}
 }
