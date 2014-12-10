@@ -55,7 +55,7 @@ public class TestMessageListenerContainer extends AbstractSingleBrokerTest {
 		offsetManager.setMetadataStore(metadataStore);
 		offsetManager.afterPropertiesSet();
 		KafkaMessageListenerContainer kafkaMessageListenerContainer = new KafkaMessageListenerContainer(kafkaBrokerConnectionFactory, offsetManager, new String[]{TEST_TOPIC});
-
+		kafkaMessageListenerContainer.setConcurrency(2);
 		final ArrayList<FastList<Object>> receivedData = new ArrayList<FastList<Object>>();
 
 		final CountDownLatch latch = new CountDownLatch(10);

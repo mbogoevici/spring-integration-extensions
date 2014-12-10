@@ -59,7 +59,7 @@
 		<property name="channelName" value="input"/>
 	</bean>
 
-	<bean id="dispatchingMessageListener" class="org.springframework.integration.kafka.simple.listener.DispatchingMessageListener">
+	<bean id="dispatchingMessageListener" class="org.springframework.integration.kafka.simple.listener.ConcurrentMessageListenerDispatcher">
 		<constructor-arg index="0" ref="partitions"/>
 		<constructor-arg index="1" value="1"/>
 		<constructor-arg index="2" ref="offsetManager"/>

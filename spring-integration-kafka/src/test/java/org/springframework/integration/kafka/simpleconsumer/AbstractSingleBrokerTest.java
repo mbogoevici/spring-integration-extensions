@@ -19,6 +19,7 @@ package org.springframework.integration.kafka.simpleconsumer;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
@@ -30,8 +31,11 @@ import kafka.utils.TestUtils;
 import kafka.utils.VerifiableProperties;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import scala.Option;
 import scala.collection.JavaConversions;
+import scala.collection.Seq;
+import scala.collection.immutable.List$;
+import scala.collection.immutable.Map;
+import scala.collection.immutable.Map$;
 
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
 import org.springframework.integration.kafka.simple.connection.KafkaConfiguration;
@@ -50,11 +54,11 @@ public class AbstractSingleBrokerTest {
 	public static void setUp() throws Exception {
 		AdminUtils.createTopic(kafkaRule.getZookeeperClient(), TEST_TOPIC, 5, 1, new Properties());
 		TestUtils.waitUntilMetadataIsPropagated(JavaConversions.asScalaBuffer(Collections.singletonList(kafkaRule.getKafkaServer())), TEST_TOPIC, 0, 5000L);
-		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 0, 5000L, Option.empty());
-		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 1, 5000L, Option.empty());
-		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 2, 5000L, Option.empty());
-		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 3, 5000L, Option.empty());
-		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 4, 5000L, Option.empty());
+//		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 0, 5000L, Option.empty());
+//		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 1, 5000L, Option.empty());
+//		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 2, 5000L, Option.empty());
+//		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 3, 5000L, Option.empty());
+//		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 4, 5000L, Option.empty());
 	}
 
 	public KafkaConfiguration getKafkaConfiguration() {
