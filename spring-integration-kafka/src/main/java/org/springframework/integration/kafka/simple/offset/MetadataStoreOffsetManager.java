@@ -69,7 +69,7 @@ public class MetadataStoreOffsetManager implements OffsetManager {
 	}
 
 	private void loadOffsets() {
-		KafkaBrokerConnection kafkaBrokerConnection = kafkaBrokerConnectionFactory.resolveAddress(kafkaBrokerConnectionFactory.getBrokerAddresses().get(0));
+		KafkaBrokerConnection kafkaBrokerConnection = kafkaBrokerConnectionFactory.createConnection(kafkaBrokerConnectionFactory.getBrokerAddresses().get(0));
 		List<Partition> partitionsRequiringInitialOffsets = new ArrayList<Partition>();
 		for (Partition partition : kafkaBrokerConnectionFactory.getPartitions()) {
 			String storedOffsetValueAsString = this.metadataStore.get(asKey(partition));

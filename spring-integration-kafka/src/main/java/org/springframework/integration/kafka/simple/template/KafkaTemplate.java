@@ -56,7 +56,7 @@ public class KafkaTemplate {
 	}
 
 	public List<KafkaMessageBatch> receive(KafkaBrokerAddress kafkaBrokerAddress, final Map<Partition, Offset> offsets, final int maxSize) {
-		return this.receive(FastList.newList(kafkaBrokerConnectionFactory.resolvePartitions(kafkaBrokerAddress)).collect(new Function<Partition, KafkaMessageFetchRequest>() {
+		return this.receive(FastList.newList(kafkaBrokerConnectionFactory.getPartitions(kafkaBrokerAddress)).collect(new Function<Partition, KafkaMessageFetchRequest>() {
 			@Override
 			public KafkaMessageFetchRequest valueOf(Partition partition) {
 				return new KafkaMessageFetchRequest(partition, offsets.get(partition).getOffset(), maxSize);
@@ -68,13 +68,13 @@ public class KafkaTemplate {
 		MutableList<KafkaBrokerAddress> distinctBrokerAddresses = ArrayIterate.collect(messageFetchRequests, new Function<KafkaMessageFetchRequest, KafkaBrokerAddress>() {
 			@Override
 			public KafkaBrokerAddress valueOf(KafkaMessageFetchRequest fetchRequest) {
-				return kafkaBrokerConnectionFactory.resolveBroker(fetchRequest.getPartition()).getBrokerAddress();
+				return kafkaBrokerConnectionFactory.getLeaderConnection(fetchRequest.getPartition()).getBrokerAddress();
 			}
 		}).distinct();
 		if (distinctBrokerAddresses.size() != 1) {
 			throw new IllegalArgumentException("All messages must be fetched from the same broker");
 		}
-		KafkaResult<KafkaMessageBatch> fetch = kafkaBrokerConnectionFactory.resolveAddress(distinctBrokerAddresses.get(0)).fetch(messageFetchRequests);
+		KafkaResult<KafkaMessageBatch> fetch = kafkaBrokerConnectionFactory.createConnection(distinctBrokerAddresses.get(0)).fetch(messageFetchRequests);
 		if (fetch.getErrors().size() > 0) {
 			// synchronously refresh on error
 			kafkaBrokerConnectionFactory.refresh();

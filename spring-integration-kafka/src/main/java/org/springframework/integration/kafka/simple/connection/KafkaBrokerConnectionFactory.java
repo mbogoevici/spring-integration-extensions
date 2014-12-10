@@ -65,9 +65,9 @@ public class KafkaBrokerConnectionFactory {
 	 * @param partition
 	 * @return the broker associated with the provided topic and partition
 	 */
-	public KafkaBrokerConnection resolveBroker(Partition partition) {
+	public KafkaBrokerConnection getLeaderConnection(Partition partition) {
 		KafkaBrokerAddress kafkaBrokerAddress = partitionBrokerMapReference.get().getBrokersByPartition().get(partition);
-		return resolveAddress(kafkaBrokerAddress);
+		return createConnection(kafkaBrokerAddress);
 	}
 
 
@@ -82,16 +82,16 @@ public class KafkaBrokerConnectionFactory {
 		return FastList.newList(topicsAndPartitions).toMap(Functions.<Partition>getPassThru(), new Function<Partition, KafkaBrokerConnection>() {
 			@Override
 			public KafkaBrokerConnection valueOf(Partition partition) {
-				return resolveBroker(partition);
+				return getLeaderConnection(partition);
 			}
 		});
 	}
 
-	public List<Partition> resolvePartitions(KafkaBrokerAddress kafkaBrokerAddress) {
+	public List<Partition> getPartitions(KafkaBrokerAddress kafkaBrokerAddress) {
 		return partitionBrokerMapReference.get().getPartitionsByBroker().get(kafkaBrokerAddress).toList();
 	}
 
-	public KafkaBrokerConnection resolveAddress(KafkaBrokerAddress kafkaBrokerAddress) {
+	public KafkaBrokerConnection createConnection(KafkaBrokerAddress kafkaBrokerAddress) {
 		return kafkaBrokersCache.getIfAbsentPutWith(kafkaBrokerAddress, new KafkaBrokerInstantiator(), kafkaBrokerAddress);
 	}
 

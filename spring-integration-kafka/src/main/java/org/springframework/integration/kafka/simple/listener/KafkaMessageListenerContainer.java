@@ -99,7 +99,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	public void start() {
 		this.running.set(true);
 		for (KafkaBrokerConnection kafkaBrokerConnection : this.kafkaTemplate.getAllBrokers()) {
-			this.consumerTaskExecutor.execute(new FetchTask(FastList.newList(this.kafkaTemplate.getKafkaBrokerConnectionFactory().resolvePartitions(kafkaBrokerConnection.getBrokerAddress()))));
+			this.consumerTaskExecutor.execute(new FetchTask(FastList.newList(this.kafkaTemplate.getKafkaBrokerConnectionFactory().getPartitions(kafkaBrokerConnection.getBrokerAddress()))));
 		}
 	}
 
