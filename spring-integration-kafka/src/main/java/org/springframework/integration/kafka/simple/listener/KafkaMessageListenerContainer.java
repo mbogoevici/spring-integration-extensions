@@ -23,13 +23,19 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.gs.collections.api.RichIterable;
 import com.gs.collections.api.block.function.Function;
+import com.gs.collections.api.block.procedure.Procedure2;
+import com.gs.collections.api.list.ImmutableList;
+import com.gs.collections.api.list.MutableList;
+import com.gs.collections.api.multimap.list.ImmutableListMultimap;
 import com.gs.collections.impl.block.function.checked.CheckedFunction;
-import com.gs.collections.impl.list.mutable.FastList;
+import com.gs.collections.impl.factory.Lists;
 import com.gs.collections.impl.utility.ArrayIterate;
 
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.SmartLifecycle;
-import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
+import org.springframework.integration.kafka.simple.connection.KafkaBrokerAddress;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
 import org.springframework.integration.kafka.simple.connection.Partition;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
@@ -37,36 +43,35 @@ import org.springframework.integration.kafka.simple.consumer.KafkaMessageBatch;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
 import org.springframework.integration.kafka.simple.offset.OffsetManager;
 import org.springframework.integration.kafka.simple.template.KafkaTemplate;
-import org.springframework.util.StringUtils;
+import org.springframework.util.Assert;
 
 /**
  * @author Marius Bogoevici
  */
-public class KafkaMessageListenerContainer implements SmartLifecycle {
+public class KafkaMessageListenerContainer implements InitializingBean,SmartLifecycle {
 
 	private final KafkaTemplate kafkaTemplate;
 
-	private final OffsetManager offsetManager;
+	private final ImmutableList<Partition> partitions;
 
-	private final Partition[] partitions;
-
-	private Executor consumerTaskExecutor = Executors.newSingleThreadExecutor();
+	private Executor taskExecutor;
 
 	private final AtomicBoolean running = new AtomicBoolean(false);
 
 	private long timeout = 100L;
 
-	private String clientId;
-
 	private int maxSize = 10000;
 
 	private MessageListener messageListener;
 
+	private OffsetManager offsetManager;
 
-	public KafkaMessageListenerContainer(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, final OffsetManager offsetManager, Partition[] partitions) {
+	public KafkaMessageListenerContainer(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, OffsetManager offsetManager, Partition[] partitions) {
+		Assert.notNull(kafkaBrokerConnectionFactory, "A connection factory must be supplied");
+		Assert.notEmpty(partitions, "A list of partitions must be provided");
 		this.kafkaTemplate = new KafkaTemplate(kafkaBrokerConnectionFactory);
 		this.offsetManager = offsetManager;
-		this.partitions = partitions;
+		this.partitions = Lists.immutable.with(partitions);
 	}
 
 	public KafkaMessageListenerContainer(final KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, OffsetManager offsetManager, String[] topics) {
@@ -77,7 +82,6 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 			}
 		}).toArray(new Partition[0]));
 	}
-
 
 	public MessageListener getMessageListener() {
 		return messageListener;
@@ -98,11 +102,30 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	}
 
 	@Override
+	public void afterPropertiesSet() throws Exception {
+		if (this.taskExecutor == null) {
+			this.taskExecutor = Executors.newCachedThreadPool();
+		}
+	}
+
+	@Override
 	public void start() {
 		this.running.set(true);
-		for (KafkaBrokerConnection kafkaBrokerConnection : this.kafkaTemplate.getAllBrokers()) {
-			this.consumerTaskExecutor.execute(new FetchTask(FastList.newList(this.kafkaTemplate.getKafkaBrokerConnectionFactory().getPartitions(kafkaBrokerConnection.getBrokerAddress()))));
-		}
+
+		ImmutableListMultimap<KafkaBrokerAddress, Partition> partitionsByBroker = this.partitions.groupBy(new Function<Partition, KafkaBrokerAddress>() {
+			@Override
+			public KafkaBrokerAddress valueOf(Partition partition) {
+				return kafkaTemplate.getKafkaBrokerConnectionFactory().getLeaderConnection(partition).getBrokerAddress();
+			}
+		});
+
+		partitionsByBroker.toMap().forEachKeyValue(new Procedure2<KafkaBrokerAddress, RichIterable<Partition>>() {
+			@Override
+			public void value(KafkaBrokerAddress brokerAddress, RichIterable<Partition> partitions) {
+				taskExecutor.execute(new FetchTask(partitions.toList()));
+			}
+		});
+
 	}
 
 	@Override
@@ -118,14 +141,6 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	@Override
 	public int getPhase() {
 		return 0;
-	}
-
-	public String getClientId() {
-		return clientId;
-	}
-
-	public void setClientId(String clientId) {
-		this.clientId = clientId;
 	}
 
 	public int getMaxSize() {
@@ -146,9 +161,9 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 
 	public class FetchTask implements Runnable {
 
-		private FastList<Partition> partitions;
+		private MutableList<Partition> partitions;
 
-		public FetchTask(FastList<Partition> partition) {
+		public FetchTask(MutableList<Partition> partition) {
 			this.partitions = partition;
 		}
 
@@ -163,7 +178,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 						public KafkaMessageFetchRequest valueOf(Partition partition) {
 							return new KafkaMessageFetchRequest(partition, offsetManager.getOffset(partition), maxSize);
 						}
-					}).toTypedArray(KafkaMessageFetchRequest.class));
+					}).toArray(new KafkaMessageFetchRequest[0]));
 					for (KafkaMessageBatch batch : receive) {
 						long highestOffset = 0;
 						for (KafkaMessage kafkaMessage : batch.getMessages()) {
@@ -185,7 +200,6 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 						// no longer running
 						return;
 					}
-					throw new IllegalStateException(e);
 				}
 			}
 		}

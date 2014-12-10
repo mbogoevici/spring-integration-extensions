@@ -30,7 +30,7 @@ import org.springframework.integration.kafka.simple.offset.OffsetManager;
 /**
  * @author Marius Bogoevici
  */
-public class BlockingQueueMessageListener implements MessageListener,Runnable,Lifecycle {
+public class BlockingQueueRunnableMessageListenerDelegate implements MessageListener,Runnable,Lifecycle {
 
 	private BlockingQueue<KafkaMessage> messages;
 
@@ -40,27 +40,10 @@ public class BlockingQueueMessageListener implements MessageListener,Runnable,Li
 
 	private OffsetManager offsetManager;
 
-	public MessageListener getDelegate() {
-		return delegate;
-	}
-
-	public void setDelegate(MessageListener delegate) {
-		this.delegate = delegate;
-	}
-
-	private Executor processingTaskExecutor = Executors.newSingleThreadExecutor();
-
-	public BlockingQueueMessageListener(int capacity, OffsetManager offsetManager) {
+	public BlockingQueueRunnableMessageListenerDelegate(int capacity, OffsetManager offsetManager, MessageListener delegate) {
 		this.offsetManager = offsetManager;
+		this.delegate = delegate;
 		this.messages = new ArrayBlockingQueue<KafkaMessage>(capacity, true);
-	}
-
-	public BlockingQueue<KafkaMessage> getMessages() {
-		return messages;
-	}
-
-	public void setMessages(BlockingQueue<KafkaMessage> messages) {
-		this.messages = messages;
 	}
 
 	@Override
@@ -78,7 +61,6 @@ public class BlockingQueueMessageListener implements MessageListener,Runnable,Li
 	@Override
 	public void start() {
 		this.running.set(true);
-		this.processingTaskExecutor.execute(this);
 	}
 
 	@Override
@@ -95,7 +77,7 @@ public class BlockingQueueMessageListener implements MessageListener,Runnable,Li
 	public void run() {
 		while(this.running.get()) {
 			try {
-				KafkaMessage nextMessage = this.getMessages().take();
+				KafkaMessage nextMessage = messages.take();
 				delegate.onMessage(nextMessage);
 				offsetManager.updateOffset(nextMessage.getPartition(), nextMessage.getNextOffset());
 			}

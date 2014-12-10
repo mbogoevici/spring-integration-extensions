@@ -17,36 +17,47 @@
 
 package org.springframework.integration.kafka.simple.listener;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.gs.collections.api.block.function.Function;
 import com.gs.collections.api.block.function.Function0;
+import com.gs.collections.api.block.procedure.Procedure;
 import com.gs.collections.api.map.MutableMap;
 import com.gs.collections.impl.block.factory.Functions;
 import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.map.mutable.UnifiedMap;
 
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.Lifecycle;
 import org.springframework.integration.kafka.simple.connection.Partition;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
 import org.springframework.integration.kafka.simple.offset.OffsetManager;
+import org.springframework.util.Assert;
 
 /**
  * @author Marius Bogoevici
  */
-public class DispatchingMessageListener implements MessageListener, InitializingBean {
+public class DispatchingMessageListener implements MessageListener, InitializingBean, Lifecycle {
 
 	private MessageListener delegateListener;
 
-	private Partition[] partitions;
+	private final Partition[] partitions;
 
-	private int consumers;
+	private final int consumers;
 
 	private OffsetManager offsetManager;
 
-	private MutableMap<Partition, MessageListener> delegates;
+	private MutableMap<Partition,BlockingQueueRunnableMessageListenerDelegate> delegates;
+
+	private int queueSize = 1024;
+
+	private Executor taskExecutor = Executors.newCachedThreadPool();
 
 	public DispatchingMessageListener(Partition[] partitions, int consumers, OffsetManager offsetManager) {
+		Assert.notEmpty(partitions, "A set of partitions must be provided");
+		Assert.isTrue(consumers <= partitions.length, "Consumers must be fewer than partitions");
 		this.partitions = partitions;
 		this.consumers = consumers;
 		this.offsetManager = offsetManager;
@@ -68,26 +79,60 @@ public class DispatchingMessageListener implements MessageListener, Initializing
 		this.offsetManager = offsetManager;
 	}
 
+	public int getQueueSize() {
+		return queueSize;
+	}
+
+	public void setQueueSize(int queueSize) {
+		this.queueSize = queueSize;
+	}
+
 	@Override
 	public void afterPropertiesSet() throws Exception {
-		final UnifiedMap<Integer, BlockingQueueMessageListener> messageProcessorAllocator = UnifiedMap.newMap();
+		final UnifiedMap<Integer, BlockingQueueRunnableMessageListenerDelegate> messageProcessorAllocator = UnifiedMap.newMap();
 
-		delegates = FastList.newListWith(partitions).toMap(Functions.<Partition>getPassThru(), new Function<Partition, MessageListener>() {
+		delegates = FastList.newListWith(partitions).toMap(Functions.<Partition>getPassThru(), new Function<Partition, BlockingQueueRunnableMessageListenerDelegate>() {
 			private AtomicInteger atomicInteger = new AtomicInteger(0);
-
 			@Override
-			public MessageListener valueOf(Partition object) {
-				return messageProcessorAllocator.getIfAbsentPut(atomicInteger.getAndIncrement() % consumers, new Function0<BlockingQueueMessageListener>() {
+			public BlockingQueueRunnableMessageListenerDelegate valueOf(Partition object) {
+				return messageProcessorAllocator.getIfAbsentPut(atomicInteger.getAndIncrement() % consumers, new Function0<BlockingQueueRunnableMessageListenerDelegate>() {
 					@Override
-					public BlockingQueueMessageListener value() {
-						BlockingQueueMessageListener blockingQueueMessageListener = new BlockingQueueMessageListener(100, offsetManager);
-						blockingQueueMessageListener.setDelegate(delegateListener);
-						blockingQueueMessageListener.start();
-						return blockingQueueMessageListener;
+					public BlockingQueueRunnableMessageListenerDelegate value() {
+						return new BlockingQueueRunnableMessageListenerDelegate(queueSize, offsetManager, delegateListener);
 					}
 				});
 			}
 		});
+
+		if (this.taskExecutor == null) {
+			this.taskExecutor = Executors.newFixedThreadPool(consumers);
+		}
+	}
+
+	@Override
+	public void start() {
+		delegates.forEachValue(new Procedure<BlockingQueueRunnableMessageListenerDelegate>() {
+			@Override
+			public void value(BlockingQueueRunnableMessageListenerDelegate delegate) {
+				delegate.start();
+				taskExecutor.execute(delegate);
+			}
+		});
+	}
+
+	@Override
+	public void stop() {
+		delegates.forEachValue(new Procedure<BlockingQueueRunnableMessageListenerDelegate>() {
+			@Override
+			public void value(BlockingQueueRunnableMessageListenerDelegate delegate) {
+				delegate.stop();
+			}
+		});
+	}
+
+	@Override
+	public boolean isRunning() {
+		return delegates.getLast().isRunning();
 	}
 
 	@Override
