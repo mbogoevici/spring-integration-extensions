@@ -39,7 +39,7 @@ import org.springframework.util.Assert;
 /**
  * @author Marius Bogoevici
  */
-public class DispatchingMessageListener implements MessageListener, InitializingBean, Lifecycle {
+public class ConcurrentMessageListenerDispatcher implements MessageListener, InitializingBean, Lifecycle {
 
 	private MessageListener delegateListener;
 
@@ -57,7 +57,7 @@ public class DispatchingMessageListener implements MessageListener, Initializing
 
 	private ErrorHandler errorHandler = new LoggingErrorHandler();
 
-	public DispatchingMessageListener(Partition[] partitions, int consumers, OffsetManager offsetManager) {
+	public ConcurrentMessageListenerDispatcher(Partition[] partitions, int consumers, OffsetManager offsetManager) {
 		Assert.notEmpty(partitions, "A set of partitions must be provided");
 		Assert.isTrue(consumers <= partitions.length, "Consumers must be fewer than partitions");
 		this.partitions = partitions;

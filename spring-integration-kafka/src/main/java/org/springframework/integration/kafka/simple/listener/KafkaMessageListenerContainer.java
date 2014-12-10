@@ -60,6 +60,8 @@ public class KafkaMessageListenerContainer implements InitializingBean,SmartLife
 
 	private Executor taskExecutor;
 
+	private int concurrency = 1;
+
 	private final AtomicBoolean running = new AtomicBoolean(false);
 
 	private long timeout = 100L;
@@ -70,7 +72,12 @@ public class KafkaMessageListenerContainer implements InitializingBean,SmartLife
 
 	private ConcurrentMap<Partition, Long> nextFetchOffsets;
 
+	private OffsetManager offsetManager;
+
+	private ConcurrentMessageListenerDispatcher messageDispatcher;
+
 	public KafkaMessageListenerContainer(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, final OffsetManager offsetManager, Partition[] partitions) {
+		this.offsetManager = offsetManager;
 		Assert.notNull(kafkaBrokerConnectionFactory, "A connection factory must be supplied");
 		Assert.notEmpty(partitions, "A list of partitions must be provided");
 		this.kafkaTemplate = new KafkaTemplate(kafkaBrokerConnectionFactory);
@@ -100,6 +107,14 @@ public class KafkaMessageListenerContainer implements InitializingBean,SmartLife
 		this.messageListener = messageListener;
 	}
 
+	public int getConcurrency() {
+		return concurrency;
+	}
+
+	public void setConcurrency(int concurrency) {
+		this.concurrency = concurrency;
+	}
+
 	@Override
 	public boolean isAutoStartup() {
 		return false;
@@ -112,10 +127,14 @@ public class KafkaMessageListenerContainer implements InitializingBean,SmartLife
 
 	@Override
 	public void afterPropertiesSet() throws Exception {
+		this.messageDispatcher = new ConcurrentMessageListenerDispatcher(partitions.toArray(new Partition[0]), concurrency, offsetManager);
+		this.messageDispatcher.setDelegateListener(messageListener);
+		this.messageDispatcher.afterPropertiesSet();
 	}
 
 	@Override
 	public void start() {
+		this.messageDispatcher.start();
 		this.running.set(true);
 
 		ImmutableListMultimap<KafkaBrokerAddress, Partition> partitionsByBroker = this.partitions.groupBy(new Function<Partition, KafkaBrokerAddress>() {
@@ -191,7 +210,7 @@ public class KafkaMessageListenerContainer implements InitializingBean,SmartLife
 					for (KafkaMessageBatch batch : receive) {
 						long highestFetchedOffset = 0;
 						for (KafkaMessage kafkaMessage : batch.getMessages()) {
-							messageListener.onMessage(kafkaMessage);
+							messageDispatcher.onMessage(kafkaMessage);
 							highestFetchedOffset = Math.max(highestFetchedOffset, kafkaMessage.getNextOffset());
 						}
 						nextFetchOffsets.replace(batch.getPartition(), highestFetchedOffset);
