@@ -30,6 +30,7 @@ import com.gs.collections.api.block.function.Function;
 import com.gs.collections.api.block.procedure.Procedure2;
 import com.gs.collections.api.list.ImmutableList;
 import com.gs.collections.api.list.MutableList;
+import com.gs.collections.api.map.MutableMap;
 import com.gs.collections.api.multimap.list.ImmutableListMultimap;
 import com.gs.collections.impl.block.factory.Functions;
 import com.gs.collections.impl.block.function.checked.CheckedFunction;
@@ -111,9 +112,6 @@ public class KafkaMessageListenerContainer implements InitializingBean,SmartLife
 
 	@Override
 	public void afterPropertiesSet() throws Exception {
-		if (this.taskExecutor == null) {
-			this.taskExecutor = Executors.newCachedThreadPool();
-		}
 	}
 
 	@Override
@@ -126,8 +124,11 @@ public class KafkaMessageListenerContainer implements InitializingBean,SmartLife
 				return kafkaTemplate.getKafkaBrokerConnectionFactory().getLeader(partition);
 			}
 		});
-
-		partitionsByBroker.toMap().forEachKeyValue(new Procedure2<KafkaBrokerAddress, RichIterable<Partition>>() {
+		MutableMap<KafkaBrokerAddress, RichIterable<Partition>> partitionsByBrokerMap = partitionsByBroker.toMap();
+		if (taskExecutor == null) {
+			taskExecutor = Executors.newFixedThreadPool(partitionsByBrokerMap.size());
+		}
+		partitionsByBrokerMap.forEachKeyValue(new Procedure2<KafkaBrokerAddress, RichIterable<Partition>>() {
 			@Override
 			public void value(KafkaBrokerAddress brokerAddress, RichIterable<Partition> partitions) {
 				taskExecutor.execute(new FetchTask(partitions.toList()));
