@@ -17,26 +17,31 @@
 
 package org.springframework.integration.kafka.simple.connection;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
-import org.springframework.integration.kafka.simple.connection.KafkaBrokerAddress;
-import org.springframework.integration.kafka.simple.connection.Partition;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 /**
  * @author Marius Bogoevici
  */
-public class KafkaConfiguration {
+public class KafkaConfiguration implements InitializingBean {
 
 	private List<KafkaBrokerAddress> brokerAddresses;
 
-	private List<Partition> partitions;
+	private List<Partition> defaultPartitions;
 
-	public KafkaConfiguration(List<KafkaBrokerAddress> brokerAddresses, List<Partition> Partitions) {
+	private String defaultTopic;
+
+	public KafkaConfiguration(List<KafkaBrokerAddress> brokerAddresses) {
 		this.brokerAddresses = brokerAddresses;
-		this.partitions = Partitions;
+	}
+
+	@Override
+	public void afterPropertiesSet() throws Exception {
+		Assert.isTrue(CollectionUtils.isEmpty(defaultPartitions) || StringUtils.isEmpty(defaultTopic), "A list of default partitions or a default topic may be specified, but not both");
 	}
 
 	public List<KafkaBrokerAddress> getBrokerAddresses() {
@@ -47,20 +52,19 @@ public class KafkaConfiguration {
 		this.brokerAddresses = brokerAddresses;
 	}
 
-	public List<Partition> getPartitions() {
-		return partitions;
+	public void setDefaultPartitions(List<Partition> defaultPartitions) {
+		this.defaultPartitions = defaultPartitions;
 	}
 
-	public List<String> getTopics() {
-		Set<String> topics = new LinkedHashSet<String>();
-		for (Partition partition : partitions) {
-			topics.add(partition.getTopic());
-		}
-		return new ArrayList<String>(topics);
+	public List<Partition> getDefaultPartitions() {
+		return defaultPartitions;
 	}
 
-	public void setPartitions(List<Partition> partitions) {
-		this.partitions = partitions;
+	public String getDefaultTopic() {
+		return defaultTopic;
 	}
 
+	public void setDefaultTopic(String defaultTopic) {
+		this.defaultTopic = defaultTopic;
+	}
 }

@@ -63,7 +63,8 @@ public class TestKafkaConnectionFactory {
 		List<KafkaBrokerAddress> brokerAddresses = Collections.singletonList(kafkaRule.getBrokerAddress());
 		Partition partition = new Partition(TEST_TOPIC, 0);
 		List<Partition> partitions = Collections.singletonList(partition);
-		KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory = new KafkaBrokerConnectionFactory(new KafkaConfiguration(brokerAddresses, partitions));
+		KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory = new KafkaBrokerConnectionFactory(new KafkaConfiguration(brokerAddresses));
+		kafkaBrokerConnectionFactory.afterPropertiesSet();
 		KafkaBrokerConnection connection = kafkaBrokerConnectionFactory.createConnection(kafkaRule.getBrokerAddress());
 		KafkaResult<KafkaBrokerAddress> leaders = connection.findLeaders(TEST_TOPIC);
 		assertThat(leaders.getErrors().entrySet(), empty());

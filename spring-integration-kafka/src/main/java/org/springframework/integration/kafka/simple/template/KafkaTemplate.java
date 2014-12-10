@@ -77,7 +77,7 @@ public class KafkaTemplate {
 		KafkaResult<KafkaMessageBatch> fetch = kafkaBrokerConnectionFactory.createConnection(distinctBrokerAddresses.get(0)).fetch(messageFetchRequests);
 		if (fetch.getErrors().size() > 0) {
 			// synchronously refresh on error
-			kafkaBrokerConnectionFactory.refresh();
+			kafkaBrokerConnectionFactory.refreshLeaders();
 		}
 		return new ArrayList<KafkaMessageBatch>(fetch.getResult().values());
 	}

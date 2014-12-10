@@ -18,6 +18,7 @@
 package org.springframework.integration.kafka.simple.connection;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -27,36 +28,43 @@ import com.gs.collections.impl.block.factory.Functions;
 import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.map.mutable.UnifiedMap;
 
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.util.Assert;
+
 /**
  * @author Marius Bogoevici
  */
-public class KafkaBrokerConnectionFactory {
-
-	private final String[] topics;
+public class KafkaBrokerConnectionFactory implements InitializingBean {
 
 	private final FastList<KafkaBrokerAddress> kafkaBrokerAddresses;
+
+	private final KafkaConfiguration kafkaConfiguration;
 
 	private UnifiedMap<KafkaBrokerAddress, KafkaBrokerConnection> kafkaBrokersCache = UnifiedMap.newMap();
 
 	private final AtomicReference<PartitionBrokerMap> partitionBrokerMapReference = new AtomicReference<PartitionBrokerMap>();
 
-	private KafkaBrokerConnection defaultBroker;
+	private KafkaBrokerConnection defaultConnection;
 
 	public KafkaBrokerConnectionFactory(KafkaConfiguration kafkaConfiguration) {
+		this.kafkaConfiguration = kafkaConfiguration;
 		this.kafkaBrokerAddresses = FastList.newList(kafkaConfiguration.getBrokerAddresses());
-		this.topics = FastList.newList(kafkaConfiguration.getPartitions()).collect(new Function<Partition, String>() {
-			@Override
-			public String valueOf(Partition partition) {
-				return partition.getTopic();
-			}
-		}).distinct().toTypedArray(String.class);
-		refresh();
 	}
 
 	public List<KafkaBrokerAddress> getBrokerAddresses() {
 		return kafkaBrokerAddresses;
 	}
 
+	public KafkaConfiguration getKafkaConfiguration() {
+		return kafkaConfiguration;
+	}
+
+	@Override
+	public void afterPropertiesSet() throws Exception {
+		Assert.notNull(kafkaConfiguration, "Kafka configuration cannot be empty");
+		Assert.notEmpty(kafkaBrokerAddresses, "A list of broker addressses must be supplied");
+		this.refreshLeaders();
+	}
 
 	/**
 	 * Resolves the broker associated with a specific topic and partition. Internally,
@@ -92,7 +100,7 @@ public class KafkaBrokerConnectionFactory {
 	}
 
 	public KafkaBrokerConnection createConnection(KafkaBrokerAddress kafkaBrokerAddress) {
-		return kafkaBrokersCache.getIfAbsentPutWith(kafkaBrokerAddress, new KafkaBrokerInstantiator(), kafkaBrokerAddress);
+		return kafkaBrokersCache.getIfAbsentPutWith(kafkaBrokerAddress, new KafkaBrokerConnectionInstantiator(), kafkaBrokerAddress);
 	}
 
 	public PartitionBrokerMap getPartitionBrokerMap() {
@@ -100,19 +108,20 @@ public class KafkaBrokerConnectionFactory {
 	}
 
 
-	public void refresh() {
+	public void refreshLeaders() {
 		synchronized (partitionBrokerMapReference) {
 			for (KafkaBrokerConnection kafkaBrokerConnection : kafkaBrokersCache) {
 				kafkaBrokerConnection.close();
 			}
-			for (KafkaBrokerAddress kafkaBrokerAddress : kafkaBrokerAddresses) {
-				KafkaBrokerConnection kafkaBrokerConnection = new KafkaBrokerConnection(kafkaBrokerAddress);
-				KafkaResult<KafkaBrokerAddress> leaders = kafkaBrokerConnection.findLeaders(topics);
+			Iterator<KafkaBrokerAddress> kafkaBrokerAddressIterator = kafkaBrokerAddresses.iterator();
+			do {
+				KafkaBrokerConnection candidateConnection = this.createConnection(kafkaBrokerAddressIterator.next());
+				KafkaResult<KafkaBrokerAddress> leaders = candidateConnection.findLeaders();
 				if (leaders.getErrors().size() == 0) {
-					this.defaultBroker = kafkaBrokerConnection;
+					this.defaultConnection = candidateConnection;
 					this.partitionBrokerMapReference.set(new PartitionBrokerMap(UnifiedMap.newMap(leaders.getResult())));
 				}
-			}
+			} while (kafkaBrokerAddressIterator.hasNext() && this.defaultConnection == null);
 		}
 	}
 
@@ -124,11 +133,13 @@ public class KafkaBrokerConnectionFactory {
 		return getPartitionBrokerMap().getPartitionsByTopic().get(topic).toList();
 	}
 
-	private class KafkaBrokerInstantiator implements Function<KafkaBrokerAddress, KafkaBrokerConnection> {
+	private class KafkaBrokerConnectionInstantiator implements Function<KafkaBrokerAddress, KafkaBrokerConnection> {
 		@Override
 		public KafkaBrokerConnection valueOf(KafkaBrokerAddress kafkaBrokerAddress) {
-			if (KafkaBrokerConnectionFactory.this.defaultBroker.getBrokerAddress().equals(kafkaBrokerAddress)) {
-				return KafkaBrokerConnectionFactory.this.defaultBroker;
+			KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory = KafkaBrokerConnectionFactory.this;
+			if (kafkaBrokerConnectionFactory.defaultConnection != null
+					&& kafkaBrokerConnectionFactory.defaultConnection.getBrokerAddress().equals(kafkaBrokerAddress)) {
+				return KafkaBrokerConnectionFactory.this.defaultConnection;
 			}
 			else {
 				return new KafkaBrokerConnection(kafkaBrokerAddress);

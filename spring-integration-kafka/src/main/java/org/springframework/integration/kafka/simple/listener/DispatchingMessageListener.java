@@ -36,7 +36,7 @@ import org.springframework.integration.kafka.simple.offset.OffsetManager;
  */
 public class DispatchingMessageListener implements MessageListener, InitializingBean {
 
-	private MessageListener delegate;
+	private MessageListener delegateListener;
 
 	private Partition[] partitions;
 
@@ -52,12 +52,12 @@ public class DispatchingMessageListener implements MessageListener, Initializing
 		this.offsetManager = offsetManager;
 	}
 
-	public MessageListener getDelegate() {
-		return delegate;
+	public MessageListener getDelegateListener() {
+		return delegateListener;
 	}
 
-	public void setDelegate(MessageListener delegate) {
-		this.delegate = delegate;
+	public void setDelegateListener(MessageListener delegate) {
+		this.delegateListener = delegate;
 	}
 
 	public OffsetManager getOffsetManager() {
@@ -81,7 +81,7 @@ public class DispatchingMessageListener implements MessageListener, Initializing
 					@Override
 					public BlockingQueueMessageListener value() {
 						BlockingQueueMessageListener blockingQueueMessageListener = new BlockingQueueMessageListener(100, offsetManager);
-						blockingQueueMessageListener.setDelegate(delegate);
+						blockingQueueMessageListener.setDelegate(delegateListener);
 						blockingQueueMessageListener.start();
 						return blockingQueueMessageListener;
 					}

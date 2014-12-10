@@ -37,6 +37,7 @@ import org.springframework.integration.kafka.simple.consumer.KafkaMessageBatch;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
 import org.springframework.integration.kafka.simple.offset.OffsetManager;
 import org.springframework.integration.kafka.simple.template.KafkaTemplate;
+import org.springframework.util.StringUtils;
 
 /**
  * @author Marius Bogoevici
@@ -60,6 +61,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	private int maxSize = 10000;
 
 	private MessageListener messageListener;
+
 
 	public KafkaMessageListenerContainer(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, final OffsetManager offsetManager, Partition[] partitions) {
 		this.kafkaTemplate = new KafkaTemplate(kafkaBrokerConnectionFactory);
