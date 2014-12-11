@@ -88,6 +88,7 @@ public class AbstractMessageListenerContainerTest extends AbstractSingleBrokerTe
 		kafkaMessageListenerContainer.stop();
 
 		assertThat(receivedData.valuesView().toList(), hasSize(testMessageCount));
+		assertThat(latch.getCount(), equalTo(0L));
 		System.out.println("All messages received ... checking ");
 
 		// Group messages received by processing thread
