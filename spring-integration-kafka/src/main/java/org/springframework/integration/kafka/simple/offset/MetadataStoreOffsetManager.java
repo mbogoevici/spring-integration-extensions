@@ -19,12 +19,21 @@ package org.springframework.integration.kafka.simple.offset;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import com.gs.collections.api.RichIterable;
+import com.gs.collections.api.block.function.Function;
+import com.gs.collections.api.block.procedure.Procedure2;
 import com.gs.collections.api.map.MutableMap;
+import com.gs.collections.api.multimap.MutableMultimap;
 import com.gs.collections.impl.map.mutable.ConcurrentHashMap;
+import com.gs.collections.impl.utility.Iterate;
+import com.gs.collections.impl.utility.MapIterate;
+import com.gs.collections.impl.utility.internal.SetIterate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.springframework.integration.kafka.simple.connection.KafkaBrokerAddress;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
 import org.springframework.integration.kafka.simple.connection.KafkaResult;
@@ -94,7 +103,6 @@ public class MetadataStoreOffsetManager implements OffsetManager {
 
 	private void loadOffsets() {
 		this.offsets = new ConcurrentHashMap<Partition, Long>();
-		KafkaBrokerConnection kafkaBrokerConnection = kafkaBrokerConnectionFactory.createConnection(kafkaBrokerConnectionFactory.getBrokerAddresses().get(0));
 		List<Partition> partitionsRequiringInitialOffsets = new ArrayList<Partition>();
 		for (Partition partition : kafkaBrokerConnectionFactory.getPartitions()) {
 			String storedOffsetValueAsString = this.metadataStore.get(asKey(partition));
@@ -114,14 +122,26 @@ public class MetadataStoreOffsetManager implements OffsetManager {
 			}
  		}
 		if (partitionsRequiringInitialOffsets.size() > 0) {
-			KafkaResult<Long> initialOffsets = kafkaBrokerConnection.fetchInitialOffset(referenceTimestamp, partitionsRequiringInitialOffsets.toArray(new Partition[partitionsRequiringInitialOffsets.size()]));
-			if (initialOffsets.getErrors().size() == 0) {
-				for (Partition partitionsRequiringInitialOffset : partitionsRequiringInitialOffsets) {
-					offsets.put(partitionsRequiringInitialOffset, initialOffsets.getResult().get(partitionsRequiringInitialOffset));
+			MutableMultimap<KafkaBrokerAddress, Partition> partitionsByLeaderAddress = Iterate.groupBy(partitionsRequiringInitialOffsets, new Function<Partition, KafkaBrokerAddress>() {
+				@Override
+				public KafkaBrokerAddress valueOf(Partition object) {
+					return kafkaBrokerConnectionFactory.getLeader(object);
 				}
-			} else {
-				throw new IllegalStateException("Cannot load initial offsets");
-			}
+			});
+			partitionsByLeaderAddress.toMap().forEachKeyValue(new Procedure2<KafkaBrokerAddress, RichIterable<Partition>>() {
+				@Override
+				public void value(KafkaBrokerAddress kafkaBrokerAddress, RichIterable<Partition> partitions) {
+					KafkaResult<Long> initialOffsets = kafkaBrokerConnectionFactory.createConnection(kafkaBrokerAddress).fetchInitialOffset(referenceTimestamp, partitions.toArray(new Partition[partitions.size()]));
+					if (initialOffsets.getErrors().size() == 0) {
+						for (Partition partition : partitions) {
+							offsets.put(partition, initialOffsets.getResult().get(partition));
+						}
+					} else {
+						throw new IllegalStateException("Cannot load initial offsets");
+					}
+				}
+			});
+
 		}
 	}
 
