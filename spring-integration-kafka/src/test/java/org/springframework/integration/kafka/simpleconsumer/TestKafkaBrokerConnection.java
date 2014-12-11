@@ -19,9 +19,12 @@ package org.springframework.integration.kafka.simpleconsumer;
 
 import java.util.List;
 
+import com.gs.collections.api.multimap.MutableMultimap;
+import com.gs.collections.impl.factory.Multimaps;
 import junit.framework.Assert;
 import kafka.producer.KeyedMessage;
 import kafka.producer.Producer;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import scala.collection.JavaConversions;
 
@@ -38,6 +41,13 @@ import org.springframework.integration.kafka.simple.util.MessageUtils;
  * @author Marius Bogoevici
  */
 public class TestKafkaBrokerConnection extends AbstractSingleBrokerTest {
+
+	@BeforeClass
+	public static void setUp() throws Exception {
+		MutableMultimap<Integer, Integer> partitionDistribution = Multimaps.mutable.list.with();
+		partitionDistribution.put(0,0);
+		createTopic(TEST_TOPIC, partitionDistribution);
+	}
 
 	@Test
 	public void testFetchPartitionMetadata() throws Exception {

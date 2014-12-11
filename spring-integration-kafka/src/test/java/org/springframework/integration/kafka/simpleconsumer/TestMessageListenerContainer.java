@@ -18,16 +18,14 @@
 package org.springframework.integration.kafka.simpleconsumer;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import com.gs.collections.api.tuple.Pair;
+import com.gs.collections.api.multimap.MutableMultimap;
+import com.gs.collections.impl.factory.Multimaps;
 import com.gs.collections.impl.list.mutable.FastList;
-import com.gs.collections.impl.tuple.Tuples;
 import kafka.utils.VerifiableProperties;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import scala.collection.JavaConversions;
 
@@ -37,13 +35,22 @@ import org.springframework.integration.kafka.simple.listener.KafkaMessageListene
 import org.springframework.integration.kafka.simple.listener.MessageListener;
 import org.springframework.integration.kafka.simple.offset.MetadataStoreOffsetManager;
 import org.springframework.integration.kafka.simple.util.MessageUtils;
-import org.springframework.integration.metadata.SimpleMetadataStore;
 
 /**
  * @author Marius Bogoevici
  */
 public class TestMessageListenerContainer extends AbstractSingleBrokerTest {
 
+	@BeforeClass
+	public static void setUp() throws Exception {
+		MutableMultimap<Integer, Integer> partitionDistribution = Multimaps.mutable.list.with();
+		partitionDistribution.put(0,0);
+		partitionDistribution.put(1,0);
+		partitionDistribution.put(2,0);
+		partitionDistribution.put(3,0);
+		partitionDistribution.put(4,0);
+		createTopic(TEST_TOPIC, partitionDistribution);
+	}
 
 	@Test
 	public void testMessageListenerContainerOnTopic() throws Exception {
@@ -51,8 +58,6 @@ public class TestMessageListenerContainer extends AbstractSingleBrokerTest {
 		KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory = getKafkaBrokerConnectionFactory();
 
 		MetadataStoreOffsetManager offsetManager = new MetadataStoreOffsetManager(kafkaBrokerConnectionFactory);
-		SimpleMetadataStore metadataStore = new SimpleMetadataStore();
-		offsetManager.setMetadataStore(metadataStore);
 		offsetManager.afterPropertiesSet();
 		KafkaMessageListenerContainer kafkaMessageListenerContainer = new KafkaMessageListenerContainer(kafkaBrokerConnectionFactory, offsetManager, new String[]{TEST_TOPIC});
 		kafkaMessageListenerContainer.setConcurrency(2);
@@ -67,6 +72,7 @@ public class TestMessageListenerContainer extends AbstractSingleBrokerTest {
 				latch.countDown();
 			}
 		});
+
 		kafkaMessageListenerContainer.afterPropertiesSet();
 		kafkaMessageListenerContainer.start();
 

@@ -26,6 +26,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
+import com.gs.collections.api.multimap.MutableMultimap;
+import com.gs.collections.impl.factory.Multimaps;
 import kafka.admin.AdminUtils;
 import kafka.utils.TestUtils;
 import org.junit.BeforeClass;
@@ -45,6 +47,13 @@ import org.springframework.integration.kafka.simple.connection.Partition;
  * @author Marius Bogoevici
  */
 public class TestKafkaConnectionFactory extends AbstractSingleBrokerTest {
+
+	@BeforeClass
+	public static void setUp() throws Exception {
+		MutableMultimap<Integer, Integer> partitionDistribution = Multimaps.mutable.list.with();
+		partitionDistribution.put(0,0);
+		createTopic(TEST_TOPIC, partitionDistribution);
+	}
 
 	@Test
 	public void testCreateConnectionFactory() throws Exception {

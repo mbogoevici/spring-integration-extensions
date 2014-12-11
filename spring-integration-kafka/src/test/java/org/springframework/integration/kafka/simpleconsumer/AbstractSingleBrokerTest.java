@@ -19,10 +19,15 @@ package org.springframework.integration.kafka.simpleconsumer;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Properties;
 
+import com.gs.collections.api.RichIterable;
+import com.gs.collections.api.block.function.Function2;
+import com.gs.collections.api.multimap.Multimap;
+import com.gs.collections.api.multimap.MutableMultimap;
+import com.gs.collections.api.tuple.Pair;
+import com.gs.collections.impl.factory.Multimaps;
+import com.gs.collections.impl.tuple.Tuples;
 import kafka.admin.AdminUtils;
 import kafka.producer.KeyedMessage;
 import kafka.producer.Producer;
@@ -32,10 +37,10 @@ import kafka.utils.VerifiableProperties;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import scala.collection.JavaConversions;
-import scala.collection.Seq;
 import scala.collection.immutable.List$;
-import scala.collection.immutable.Map;
+import scala.collection.Map;
 import scala.collection.immutable.Map$;
+import scala.collection.immutable.Seq;
 
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
 import org.springframework.integration.kafka.simple.connection.KafkaConfiguration;
@@ -50,15 +55,22 @@ public class AbstractSingleBrokerTest {
 	@ClassRule
 	public static KafkaSingleBrokerRule kafkaRule = new KafkaSingleBrokerRule();
 
-	@BeforeClass
-	public static void setUp() throws Exception {
-		AdminUtils.createTopic(kafkaRule.getZookeeperClient(), TEST_TOPIC, 5, 1, new Properties());
+
+
+	public static void createTopic(String topicName, Multimap<Integer, Integer> partitionDistribution) {
+		AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK(kafkaRule.getZookeeperClient(), topicName, toKafkaPartitionMap(partitionDistribution), AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK$default$4(), AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK$default$5());
 		TestUtils.waitUntilMetadataIsPropagated(JavaConversions.asScalaBuffer(Collections.singletonList(kafkaRule.getKafkaServer())), TEST_TOPIC, 0, 5000L);
-//		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 0, 5000L, Option.empty());
-//		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 1, 5000L, Option.empty());
-//		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 2, 5000L, Option.empty());
-//		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 3, 5000L, Option.empty());
-//		TestUtils.waitUntilLeaderIsElectedOrChanged(kafkaRule.getZookeeperClient(), TEST_TOPIC, 4, 5000L, Option.empty());
+	}
+
+	public static Map toKafkaPartitionMap(Multimap<Integer, Integer> partitions) {
+		java.util.Map<Object, Seq<Object>> m = partitions.toMap().collect(new Function2<Integer, RichIterable<Integer>, Pair<Object, Seq<Object>>>() {
+			@Override
+			public Pair<Object, Seq<Object>> value(Integer argument1, RichIterable<Integer> argument2) {
+				return Tuples.pair((Object) argument1, List$.MODULE$.fromArray(argument2.toArray(new Object[0])).toSeq());
+			}
+		});
+
+		return Map$.MODULE$.apply(JavaConversions.asScalaMap(m).toSeq());
 	}
 
 	public KafkaConfiguration getKafkaConfiguration() {
