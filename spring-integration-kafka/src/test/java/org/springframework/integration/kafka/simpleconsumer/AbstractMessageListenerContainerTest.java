@@ -48,7 +48,6 @@ import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnec
 import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
 import org.springframework.integration.kafka.simple.listener.KafkaMessageListenerContainer;
 import org.springframework.integration.kafka.simple.listener.MessageListener;
-import org.springframework.integration.kafka.simple.offset.MetadataStoreOffsetManager;
 
 /**
  * @author Marius Bogoevici
@@ -58,8 +57,7 @@ public class AbstractMessageListenerContainerTest extends AbstractSingleBrokerTe
 	public void runMessageListenerTest(int maxReceiveSize, int concurrency, int partitionCount, int testMessageCount) throws Exception {
 
 		KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory = getKafkaBrokerConnectionFactory();
-		MetadataStoreOffsetManager offsetManager = new MetadataStoreOffsetManager(kafkaBrokerConnectionFactory);
-		final KafkaMessageListenerContainer kafkaMessageListenerContainer = new KafkaMessageListenerContainer(kafkaBrokerConnectionFactory, offsetManager, new String[]{TEST_TOPIC});
+		final KafkaMessageListenerContainer kafkaMessageListenerContainer = new KafkaMessageListenerContainer(kafkaBrokerConnectionFactory, new String[]{TEST_TOPIC});
 		kafkaMessageListenerContainer.setMaxSize(maxReceiveSize);
 		kafkaMessageListenerContainer.setConcurrency(concurrency);
 

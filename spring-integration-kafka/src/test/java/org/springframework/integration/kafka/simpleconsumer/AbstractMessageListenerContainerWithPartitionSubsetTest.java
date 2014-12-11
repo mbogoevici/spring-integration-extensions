@@ -62,7 +62,6 @@ public class AbstractMessageListenerContainerWithPartitionSubsetTest extends Abs
 	public void runMessageListenerTest(int maxReceiveSize, int concurrency, int partitionCount, int testMessageCount) throws Exception {
 
 		KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory = getKafkaBrokerConnectionFactory();
-		MetadataStoreOffsetManager offsetManager = new MetadataStoreOffsetManager(kafkaBrokerConnectionFactory);
 		ArrayList<Partition> readPartitions = new ArrayList<Partition>();
 		int divisionFactor = 2;
 		for (int i = 0; i < partitionCount; i++) {
@@ -70,7 +69,7 @@ public class AbstractMessageListenerContainerWithPartitionSubsetTest extends Abs
 				readPartitions.add(new Partition(TEST_TOPIC, i));
 			}
 		}
-		final KafkaMessageListenerContainer kafkaMessageListenerContainer = new KafkaMessageListenerContainer(kafkaBrokerConnectionFactory, offsetManager, readPartitions.toArray(new Partition[readPartitions.size()]));
+		final KafkaMessageListenerContainer kafkaMessageListenerContainer = new KafkaMessageListenerContainer(kafkaBrokerConnectionFactory, readPartitions.toArray(new Partition[readPartitions.size()]));
 		kafkaMessageListenerContainer.setMaxSize(maxReceiveSize);
 		kafkaMessageListenerContainer.setConcurrency(concurrency);
 
