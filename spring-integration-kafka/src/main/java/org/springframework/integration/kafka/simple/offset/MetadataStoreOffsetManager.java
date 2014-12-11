@@ -39,7 +39,7 @@ import org.springframework.integration.metadata.SimpleMetadataStore;
  *
  * @author Marius Bogoevici
  */
-public class MetadataStoreOffsetManager implements OffsetManager, InitializingBean {
+public class MetadataStoreOffsetManager implements OffsetManager {
 
 	private final static Log LOG = LogFactory.getLog(MetadataStoreOffsetManager.class);
 
@@ -55,6 +55,7 @@ public class MetadataStoreOffsetManager implements OffsetManager, InitializingBe
 
 	public MetadataStoreOffsetManager(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory) {
 		this.kafkaBrokerConnectionFactory = kafkaBrokerConnectionFactory;
+		loadOffsets();
 	}
 
 	public String getConsumerId() {
@@ -79,11 +80,6 @@ public class MetadataStoreOffsetManager implements OffsetManager, InitializingBe
 
 	public void setReferenceTimestamp(long referenceTimestamp) {
 		this.referenceTimestamp = referenceTimestamp;
-	}
-
-	@Override
-	public void afterPropertiesSet() throws Exception {
-		loadOffsets();
 	}
 
 	@Override

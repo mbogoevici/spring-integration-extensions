@@ -30,7 +30,7 @@ import org.springframework.integration.kafka.simple.offset.OffsetManager;
 /**
  * @author Marius Bogoevici
  */
-public class BlockingQueueRunnableMessageListenerDelegate implements MessageListener,Runnable,Lifecycle {
+public class BlockingQueueRunnableMessageListenerDelegate implements Runnable,Lifecycle {
 
 	private BlockingQueue<KafkaMessage> messages;
 
@@ -46,7 +46,6 @@ public class BlockingQueueRunnableMessageListenerDelegate implements MessageList
 		this.messages = new ArrayBlockingQueue<KafkaMessage>(capacity, true);
 	}
 
-	@Override
 	public void onMessage(KafkaMessage message) {
 		try {
 			this.messages.put(message);

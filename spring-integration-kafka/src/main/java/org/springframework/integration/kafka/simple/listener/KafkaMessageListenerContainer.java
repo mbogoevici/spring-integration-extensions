@@ -52,7 +52,7 @@ import org.springframework.util.Assert;
 /**
  * @author Marius Bogoevici
  */
-public class KafkaMessageListenerContainer implements InitializingBean,SmartLifecycle {
+public class KafkaMessageListenerContainer implements SmartLifecycle {
 
 	private final KafkaTemplate kafkaTemplate;
 
@@ -126,14 +126,9 @@ public class KafkaMessageListenerContainer implements InitializingBean,SmartLife
 	}
 
 	@Override
-	public void afterPropertiesSet() throws Exception {
+	public void start() {
 		this.messageDispatcher = new ConcurrentMessageListenerDispatcher(partitions.toArray(new Partition[0]), concurrency, offsetManager);
 		this.messageDispatcher.setDelegateListener(messageListener);
-		this.messageDispatcher.afterPropertiesSet();
-	}
-
-	@Override
-	public void start() {
 		this.messageDispatcher.start();
 		this.running.set(true);
 

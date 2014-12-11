@@ -41,7 +41,7 @@ import org.springframework.util.Assert;
 /**
  * @author Marius Bogoevici
  */
-public class ConcurrentMessageListenerDispatcher implements MessageListener, InitializingBean, Lifecycle {
+public class ConcurrentMessageListenerDispatcher implements MessageListener, Lifecycle {
 
 	private MessageListener delegateListener;
 
@@ -101,9 +101,8 @@ public class ConcurrentMessageListenerDispatcher implements MessageListener, Ini
 	}
 
 	@Override
-	public void afterPropertiesSet() throws Exception {
+	public void start() {
 		final UnifiedMap<Integer, BlockingQueueRunnableMessageListenerDelegate> messageProcessorAllocator = UnifiedMap.newMap();
-
 		delegates = FastList.newListWith(partitions).toMap(Functions.<Partition>getPassThru(), new Function<Partition, BlockingQueueRunnableMessageListenerDelegate>() {
 			private AtomicInteger atomicInteger = new AtomicInteger(0);
 			@Override
@@ -120,10 +119,6 @@ public class ConcurrentMessageListenerDispatcher implements MessageListener, Ini
 		if (this.taskExecutor == null) {
 			this.taskExecutor = Executors.newFixedThreadPool(consumers, new CustomizableThreadFactory("dispatcher-"));
 		}
-	}
-
-	@Override
-	public void start() {
 		delegates.flip().keyBag().toSet().forEach(new Procedure<BlockingQueueRunnableMessageListenerDelegate>() {
 			@Override
 			public void value(BlockingQueueRunnableMessageListenerDelegate delegate) {
