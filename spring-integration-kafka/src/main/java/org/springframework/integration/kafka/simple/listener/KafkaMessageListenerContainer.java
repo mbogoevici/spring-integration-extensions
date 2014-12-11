@@ -208,15 +208,17 @@ public class KafkaMessageListenerContainer implements InitializingBean,SmartLife
 						}
 					}).toArray(new KafkaMessageFetchRequest[0]));
 					for (KafkaMessageBatch batch : receive) {
-						long highestFetchedOffset = 0;
-						for (KafkaMessage kafkaMessage : batch.getMessages()) {
-							messageDispatcher.onMessage(kafkaMessage);
-							highestFetchedOffset = Math.max(highestFetchedOffset, kafkaMessage.getNextOffset());
-						}
-						nextFetchOffsets.replace(batch.getPartition(), highestFetchedOffset);
-						// if there are still messages on server, we can go on and retrieve more
-						if (highestFetchedOffset < batch.getHighWatermark()) {
-							partitionsWithRemainingData.add(batch.getPartition());
+						if (!batch.getMessages().isEmpty()) {
+							long highestFetchedOffset = 0;
+							for (KafkaMessage kafkaMessage : batch.getMessages()) {
+								messageDispatcher.onMessage(kafkaMessage);
+								highestFetchedOffset = Math.max(highestFetchedOffset, kafkaMessage.getNextOffset());
+							}
+							nextFetchOffsets.replace(batch.getPartition(), highestFetchedOffset);
+							// if there are still messages on server, we can go on and retrieve more
+							if (highestFetchedOffset < batch.getHighWatermark()) {
+								partitionsWithRemainingData.add(batch.getPartition());
+							}
 						}
 					}
 				} while (!partitionsWithRemainingData.isEmpty());

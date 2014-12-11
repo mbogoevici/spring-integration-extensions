@@ -19,6 +19,7 @@ package org.springframework.integration.kafka.simple.listener;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.gs.collections.api.block.function.Function;
@@ -34,6 +35,7 @@ import org.springframework.context.Lifecycle;
 import org.springframework.integration.kafka.simple.connection.Partition;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
 import org.springframework.integration.kafka.simple.offset.OffsetManager;
+import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 import org.springframework.util.Assert;
 
 /**
@@ -53,7 +55,7 @@ public class ConcurrentMessageListenerDispatcher implements MessageListener, Ini
 
 	private int queueSize = 1024;
 
-	private Executor taskExecutor = Executors.newCachedThreadPool();
+	private Executor taskExecutor;
 
 	private ErrorHandler errorHandler = new LoggingErrorHandler();
 
@@ -116,13 +118,13 @@ public class ConcurrentMessageListenerDispatcher implements MessageListener, Ini
 		});
 
 		if (this.taskExecutor == null) {
-			this.taskExecutor = Executors.newFixedThreadPool(consumers);
+			this.taskExecutor = Executors.newFixedThreadPool(consumers, new CustomizableThreadFactory("dispatcher-"));
 		}
 	}
 
 	@Override
 	public void start() {
-		delegates.forEachValue(new Procedure<BlockingQueueRunnableMessageListenerDelegate>() {
+		delegates.flip().keyBag().toSet().forEach(new Procedure<BlockingQueueRunnableMessageListenerDelegate>() {
 			@Override
 			public void value(BlockingQueueRunnableMessageListenerDelegate delegate) {
 				delegate.start();
