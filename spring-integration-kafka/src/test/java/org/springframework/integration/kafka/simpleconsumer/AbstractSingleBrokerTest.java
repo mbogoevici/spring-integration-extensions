@@ -20,6 +20,7 @@ package org.springframework.integration.kafka.simpleconsumer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 
 import com.gs.collections.api.RichIterable;
 import com.gs.collections.api.block.function.Function2;
@@ -29,6 +30,7 @@ import com.gs.collections.impl.tuple.Tuples;
 import kafka.admin.AdminUtils;
 import kafka.producer.KeyedMessage;
 import kafka.producer.Producer;
+import kafka.producer.ProducerConfig;
 import kafka.serializer.StringEncoder;
 import kafka.utils.TestUtils;
 import kafka.utils.VerifiableProperties;
@@ -74,14 +76,17 @@ public class AbstractSingleBrokerTest {
 	public scala.collection.Seq<KeyedMessage<String, String>> createMessages(int count) {
 		List<KeyedMessage<String,String>> messages = new ArrayList<KeyedMessage<String, String>>();
 		for (int i=0; i<count; i++) {
-			messages.add(new KeyedMessage<String, String>(TEST_TOPIC, "Key " + i, "Message " + i));
+			messages.add(new KeyedMessage<String, String>(TEST_TOPIC, "Key " + i, i, "Message " + i));
 		}
 		return JavaConversions.asScalaBuffer(messages).toSeq();
 	}
 
 	public Producer<String, String> createStringProducer() {
 		StringEncoder encoder = new StringEncoder(new VerifiableProperties());
-		return TestUtils.createProducer(kafkaRule.getKafkaServer().config().hostName() + ":" + kafkaRule.getKafkaServer().config().port(), encoder, encoder);
+		Properties producerConfig = TestUtils.getProducerConfig(kafkaRule.getKafkaServer().config().hostName() + ":" + kafkaRule.getKafkaServer().config().port(), "org.springframework.integration.kafka.simpleconsumer.TestPartitioner");
+		producerConfig.put("serializer.class", StringEncoder.class.getCanonicalName());
+		producerConfig.put("key.serializer.class",  StringEncoder.class.getCanonicalName());
+		return new Producer<String, String>(new ProducerConfig(producerConfig));
 	}
 
 	public KafkaBrokerConnectionFactory getKafkaBrokerConnectionFactory() throws Exception {
