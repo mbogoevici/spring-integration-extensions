@@ -24,11 +24,11 @@ public class Partition {
 
 	private String topic;
 
-	private int number;
+	private int id;
 
-	public Partition(String topic, int number) {
+	public Partition(String topic, int id) {
 		this.topic = topic;
-		this.number = number;
+		this.id = id;
 	}
 
 	public String getTopic() {
@@ -39,12 +39,12 @@ public class Partition {
 		this.topic = topic;
 	}
 
-	public int getNumber() {
-		return number;
+	public int getId() {
+		return id;
 	}
 
-	public void setNumber(int number) {
-		this.number = number;
+	public void setId(int id) {
+		this.id = id;
 	}
 
 	@Override
@@ -56,7 +56,7 @@ public class Partition {
 			return false;
 		}
 		Partition partition = (Partition) o;
-		if (number != partition.number) {
+		if (id != partition.id) {
 			return false;
 		}
 		if (!topic.equals(partition.topic)) {
@@ -68,12 +68,12 @@ public class Partition {
 	@Override
 	public int hashCode() {
 		int result = topic.hashCode();
-		result = 31 * result + number;
+		result = 31 * result + id;
 		return result;
 	}
 
 	@Override
 	public String toString() {
-		return "Partition[" + "topic='" + topic + '\'' + ", number=" + number + ']';
+		return "Partition[" + "topic='" + topic + '\'' + ", id=" + id + ']';
 	}
 }
