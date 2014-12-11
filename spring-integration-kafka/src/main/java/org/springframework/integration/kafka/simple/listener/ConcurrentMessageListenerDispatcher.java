@@ -41,6 +41,10 @@ import org.springframework.util.Assert;
  */
 public class ConcurrentMessageListenerDispatcher implements Lifecycle {
 
+	private final Object lifecycleMonitor = new Object();
+
+	private volatile boolean running;
+
 	private MessageListener delegateListener;
 
 	private final Partition[] partitions;
@@ -93,55 +97,63 @@ public class ConcurrentMessageListenerDispatcher implements Lifecycle {
 
 	@Override
 	public void start() {
-		final UnifiedMap<Integer, BlockingQueueMessageListenerExecutor> messageProcessorAllocator = UnifiedMap.newMap();
-		delegates = FastList.newListWith(partitions).toMap(Functions.<Partition>getPassThru(), new Function<Partition, BlockingQueueMessageListenerExecutor>() {
-			private AtomicInteger atomicInteger = new AtomicInteger(0);
-			@Override
-			public BlockingQueueMessageListenerExecutor valueOf(Partition object) {
-				return messageProcessorAllocator.getIfAbsentPut(atomicInteger.getAndIncrement() % consumers, new Function0<BlockingQueueMessageListenerExecutor>() {
+		synchronized (lifecycleMonitor) {
+			if (!isRunning()) {
+				final UnifiedMap<Integer, BlockingQueueMessageListenerExecutor> messageProcessorAllocator = UnifiedMap.newMap();
+				delegates = FastList.newListWith(partitions).toMap(Functions.<Partition>getPassThru(), new Function<Partition, BlockingQueueMessageListenerExecutor>() {
+					private AtomicInteger atomicInteger = new AtomicInteger(0);
 					@Override
-					public BlockingQueueMessageListenerExecutor value() {
-						return new BlockingQueueMessageListenerExecutor(queueSize, offsetManager, delegateListener);
+					public BlockingQueueMessageListenerExecutor valueOf(Partition object) {
+						return messageProcessorAllocator.getIfAbsentPut(atomicInteger.getAndIncrement() % consumers, new Function0<BlockingQueueMessageListenerExecutor>() {
+							@Override
+							public BlockingQueueMessageListenerExecutor value() {
+								BlockingQueueMessageListenerExecutor blockingQueueMessageListenerExecutor = new BlockingQueueMessageListenerExecutor(queueSize, offsetManager, delegateListener);
+								if (errorHandler != null) {
+									blockingQueueMessageListenerExecutor.setErrorHandler(errorHandler);
+								}
+								return blockingQueueMessageListenerExecutor;
+							}
+						});
 					}
 				});
-			}
-		});
 
-		if (this.taskExecutor == null) {
-			this.taskExecutor = Executors.newFixedThreadPool(consumers, new CustomizableThreadFactory("dispatcher-"));
-		}
-		delegates.flip().keyBag().toSet().forEach(new Procedure<BlockingQueueMessageListenerExecutor>() {
-			@Override
-			public void value(BlockingQueueMessageListenerExecutor delegate) {
-				delegate.start();
-				taskExecutor.execute(delegate);
+				if (this.taskExecutor == null) {
+					this.taskExecutor = Executors.newFixedThreadPool(consumers, new CustomizableThreadFactory("dispatcher-"));
+				}
+				delegates.flip().keyBag().toSet().forEach(new Procedure<BlockingQueueMessageListenerExecutor>() {
+					@Override
+					public void value(BlockingQueueMessageListenerExecutor delegate) {
+						delegate.start();
+						taskExecutor.execute(delegate);
+					}
+				});
+				this.running = true;
 			}
-		});
+		}
 	}
 
 	@Override
 	public void stop() {
-		delegates.forEachValue(new Procedure<BlockingQueueMessageListenerExecutor>() {
-			@Override
-			public void value(BlockingQueueMessageListenerExecutor delegate) {
-				delegate.stop();
+		synchronized (lifecycleMonitor) {
+			if (isRunning()) {
+				this.running = false;
+				delegates.forEachValue(new Procedure<BlockingQueueMessageListenerExecutor>() {
+					@Override
+					public void value(BlockingQueueMessageListenerExecutor delegate) {
+						delegate.stop();
+					}
+				});
 			}
-		});
+		}
 	}
 
 	@Override
 	public boolean isRunning() {
-		return delegates.getLast().isRunning();
+		return running;
 	}
 
 	public void dispatch(KafkaMessage message) {
-		try {
-			delegates.get(message.getPartition()).onMessage(message);
-			this.offsetManager.updateOffset(message.getPartition(), message.getNextOffset());
-		}
-		catch (Exception e) {
-			errorHandler.handleError(e);
-		}
+			delegates.get(message.getPartition()).enqueue(message);
 	}
 
 }

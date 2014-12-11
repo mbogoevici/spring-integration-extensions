@@ -22,6 +22,6 @@ package org.springframework.integration.kafka.simple.listener;
  */
 public interface ErrorHandler {
 
-	void handleError(Exception e);
+	void handle(Exception e);
 
 }

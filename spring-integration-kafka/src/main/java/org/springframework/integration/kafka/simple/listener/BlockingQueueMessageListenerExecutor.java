@@ -19,9 +19,6 @@ package org.springframework.integration.kafka.simple.listener;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.springframework.context.Lifecycle;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
@@ -34,11 +31,13 @@ public class BlockingQueueMessageListenerExecutor implements Runnable,Lifecycle 
 
 	private BlockingQueue<KafkaMessage> messages;
 
-	private AtomicBoolean running = new AtomicBoolean(false);
+	private volatile boolean running = false;
 
 	private MessageListener delegate;
 
 	private OffsetManager offsetManager;
+
+	private ErrorHandler errorHandler = new LoggingErrorHandler();
 
 	public BlockingQueueMessageListenerExecutor(int capacity, OffsetManager offsetManager, MessageListener delegate) {
 		this.offsetManager = offsetManager;
@@ -46,39 +45,54 @@ public class BlockingQueueMessageListenerExecutor implements Runnable,Lifecycle 
 		this.messages = new ArrayBlockingQueue<KafkaMessage>(capacity, true);
 	}
 
-	public void onMessage(KafkaMessage message) {
+	public void enqueue(KafkaMessage message) {
 		try {
 			this.messages.put(message);
 		}
 		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			if (this.isRunning()) {
-				this.onMessage(message);
+				this.enqueue(message);
 			}
 		}
 	}
 
+	public ErrorHandler getErrorHandler() {
+		return errorHandler;
+	}
+
+	public void setErrorHandler(ErrorHandler errorHandler) {
+		this.errorHandler = errorHandler;
+	}
+
 	@Override
 	public void start() {
-		this.running.set(true);
+		this.running = true;
 	}
 
 	@Override
 	public void stop() {
-		this.running.set(false);
+		this.running =false;
 	}
 
 	@Override
 	public boolean isRunning() {
-		return this.running.get();
+		return this.running;
 	}
 
 	@Override
 	public void run() {
-		while(this.running.get()) {
+		while(this.running) {
 			try {
 				KafkaMessage nextMessage = messages.take();
-				delegate.onMessage(nextMessage);
-				offsetManager.updateOffset(nextMessage.getPartition(), nextMessage.getNextOffset());
+				try {
+					delegate.onMessage(nextMessage);
+				}
+				catch (Exception e) {
+					errorHandler.handle(e);
+				} finally {
+					offsetManager.updateOffset(nextMessage.getPartition(), nextMessage.getNextOffset());
+				}
 			}
 			catch (InterruptedException e) {
 				Thread.currentThread().interrupt();

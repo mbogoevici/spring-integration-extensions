@@ -28,7 +28,7 @@ class LoggingErrorHandler implements ErrorHandler {
 	private static final Log LOGGER = LogFactory.getLog(LoggingErrorHandler.class);
 
 	@Override
-	public void handleError(Exception e) {
+	public void handle(Exception e) {
 		LOGGER.error(e);
 	}
 
