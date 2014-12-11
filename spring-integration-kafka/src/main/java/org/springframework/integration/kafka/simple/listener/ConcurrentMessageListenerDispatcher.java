@@ -19,7 +19,6 @@ package org.springframework.integration.kafka.simple.listener;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.gs.collections.api.block.function.Function;
@@ -30,7 +29,6 @@ import com.gs.collections.impl.block.factory.Functions;
 import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.map.mutable.UnifiedMap;
 
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.Lifecycle;
 import org.springframework.integration.kafka.simple.connection.Partition;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
@@ -41,7 +39,7 @@ import org.springframework.util.Assert;
 /**
  * @author Marius Bogoevici
  */
-public class ConcurrentMessageListenerDispatcher implements MessageListener, Lifecycle {
+public class ConcurrentMessageListenerDispatcher implements Lifecycle {
 
 	private MessageListener delegateListener;
 
@@ -51,7 +49,7 @@ public class ConcurrentMessageListenerDispatcher implements MessageListener, Lif
 
 	private OffsetManager offsetManager;
 
-	private MutableMap<Partition,BlockingQueueRunnableMessageListenerDelegate> delegates;
+	private MutableMap<Partition,BlockingQueueMessageListenerExecutor> delegates;
 
 	private int queueSize = 1024;
 
@@ -59,22 +57,15 @@ public class ConcurrentMessageListenerDispatcher implements MessageListener, Lif
 
 	private ErrorHandler errorHandler = new LoggingErrorHandler();
 
-	public ConcurrentMessageListenerDispatcher(Partition[] partitions, int consumers, OffsetManager offsetManager) {
+	public ConcurrentMessageListenerDispatcher(MessageListener delegateListener, Partition[] partitions, int consumers, OffsetManager offsetManager) {
 		Assert.notEmpty(partitions, "A set of partitions must be provided");
 		Assert.isTrue(consumers <= partitions.length, "Consumers must be fewer than partitions");
+		Assert.notNull(delegateListener, "A delegate must be provided");
+		this.delegateListener = delegateListener;
 		this.partitions = partitions;
 		this.consumers = consumers;
 		this.offsetManager = offsetManager;
 	}
-
-	public MessageListener getDelegateListener() {
-		return delegateListener;
-	}
-
-	public void setDelegateListener(MessageListener delegate) {
-		this.delegateListener = delegate;
-	}
-
 
 	public ErrorHandler getErrorHandler() {
 		return errorHandler;
@@ -102,15 +93,15 @@ public class ConcurrentMessageListenerDispatcher implements MessageListener, Lif
 
 	@Override
 	public void start() {
-		final UnifiedMap<Integer, BlockingQueueRunnableMessageListenerDelegate> messageProcessorAllocator = UnifiedMap.newMap();
-		delegates = FastList.newListWith(partitions).toMap(Functions.<Partition>getPassThru(), new Function<Partition, BlockingQueueRunnableMessageListenerDelegate>() {
+		final UnifiedMap<Integer, BlockingQueueMessageListenerExecutor> messageProcessorAllocator = UnifiedMap.newMap();
+		delegates = FastList.newListWith(partitions).toMap(Functions.<Partition>getPassThru(), new Function<Partition, BlockingQueueMessageListenerExecutor>() {
 			private AtomicInteger atomicInteger = new AtomicInteger(0);
 			@Override
-			public BlockingQueueRunnableMessageListenerDelegate valueOf(Partition object) {
-				return messageProcessorAllocator.getIfAbsentPut(atomicInteger.getAndIncrement() % consumers, new Function0<BlockingQueueRunnableMessageListenerDelegate>() {
+			public BlockingQueueMessageListenerExecutor valueOf(Partition object) {
+				return messageProcessorAllocator.getIfAbsentPut(atomicInteger.getAndIncrement() % consumers, new Function0<BlockingQueueMessageListenerExecutor>() {
 					@Override
-					public BlockingQueueRunnableMessageListenerDelegate value() {
-						return new BlockingQueueRunnableMessageListenerDelegate(queueSize, offsetManager, delegateListener);
+					public BlockingQueueMessageListenerExecutor value() {
+						return new BlockingQueueMessageListenerExecutor(queueSize, offsetManager, delegateListener);
 					}
 				});
 			}
@@ -119,9 +110,9 @@ public class ConcurrentMessageListenerDispatcher implements MessageListener, Lif
 		if (this.taskExecutor == null) {
 			this.taskExecutor = Executors.newFixedThreadPool(consumers, new CustomizableThreadFactory("dispatcher-"));
 		}
-		delegates.flip().keyBag().toSet().forEach(new Procedure<BlockingQueueRunnableMessageListenerDelegate>() {
+		delegates.flip().keyBag().toSet().forEach(new Procedure<BlockingQueueMessageListenerExecutor>() {
 			@Override
-			public void value(BlockingQueueRunnableMessageListenerDelegate delegate) {
+			public void value(BlockingQueueMessageListenerExecutor delegate) {
 				delegate.start();
 				taskExecutor.execute(delegate);
 			}
@@ -130,9 +121,9 @@ public class ConcurrentMessageListenerDispatcher implements MessageListener, Lif
 
 	@Override
 	public void stop() {
-		delegates.forEachValue(new Procedure<BlockingQueueRunnableMessageListenerDelegate>() {
+		delegates.forEachValue(new Procedure<BlockingQueueMessageListenerExecutor>() {
 			@Override
-			public void value(BlockingQueueRunnableMessageListenerDelegate delegate) {
+			public void value(BlockingQueueMessageListenerExecutor delegate) {
 				delegate.stop();
 			}
 		});
@@ -143,8 +134,7 @@ public class ConcurrentMessageListenerDispatcher implements MessageListener, Lif
 		return delegates.getLast().isRunning();
 	}
 
-	@Override
-	public void onMessage(KafkaMessage message) {
+	public void dispatch(KafkaMessage message) {
 		try {
 			delegates.get(message.getPartition()).onMessage(message);
 			this.offsetManager.updateOffset(message.getPartition(), message.getNextOffset());

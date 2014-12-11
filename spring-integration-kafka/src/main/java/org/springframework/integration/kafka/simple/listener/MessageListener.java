@@ -23,6 +23,5 @@ import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
  * @author Marius Bogoevici
  */
 public interface MessageListener {
-
 	void onMessage(KafkaMessage message);
 }

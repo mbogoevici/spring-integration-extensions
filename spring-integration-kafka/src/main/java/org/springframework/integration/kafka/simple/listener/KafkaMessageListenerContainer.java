@@ -37,7 +37,6 @@ import com.gs.collections.impl.block.function.checked.CheckedFunction;
 import com.gs.collections.impl.factory.Lists;
 import com.gs.collections.impl.utility.ArrayIterate;
 
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerAddress;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
@@ -127,8 +126,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 
 	@Override
 	public void start() {
-		this.messageDispatcher = new ConcurrentMessageListenerDispatcher(partitions.toArray(new Partition[0]), concurrency, offsetManager);
-		this.messageDispatcher.setDelegateListener(messageListener);
+		this.messageDispatcher = new ConcurrentMessageListenerDispatcher(messageListener, partitions.toArray(new Partition[0]), concurrency, offsetManager);
 		this.messageDispatcher.start();
 		this.running.set(true);
 
@@ -206,7 +204,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 						if (!batch.getMessages().isEmpty()) {
 							long highestFetchedOffset = 0;
 							for (KafkaMessage kafkaMessage : batch.getMessages()) {
-								messageDispatcher.onMessage(kafkaMessage);
+								messageDispatcher.dispatch(kafkaMessage);
 								highestFetchedOffset = Math.max(highestFetchedOffset, kafkaMessage.getNextOffset());
 							}
 							nextFetchOffsets.replace(batch.getPartition(), highestFetchedOffset);

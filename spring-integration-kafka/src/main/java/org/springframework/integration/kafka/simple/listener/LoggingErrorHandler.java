@@ -31,4 +31,5 @@ class LoggingErrorHandler implements ErrorHandler {
 	public void handleError(Exception e) {
 		LOGGER.error(e);
 	}
+
 }
