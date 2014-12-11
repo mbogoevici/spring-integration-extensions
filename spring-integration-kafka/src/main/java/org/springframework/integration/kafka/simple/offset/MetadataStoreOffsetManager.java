@@ -25,7 +25,6 @@ import com.gs.collections.impl.map.mutable.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
 import org.springframework.integration.kafka.simple.connection.KafkaResult;
@@ -127,6 +126,6 @@ public class MetadataStoreOffsetManager implements OffsetManager {
 	}
 
 	private String asKey(Partition partition) {
-		return partition.getTopic() + " " + partition.getNumber() + " " + consumerId;
+		return partition.getTopic() + " " + partition.getId() + " " + consumerId;
 	}
 }

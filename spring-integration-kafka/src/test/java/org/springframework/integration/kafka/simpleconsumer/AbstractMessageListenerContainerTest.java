@@ -69,7 +69,7 @@ public class AbstractMessageListenerContainerTest extends AbstractSingleBrokerTe
 			@Override
 			public void onMessage(KafkaMessage message) {
 				kafka.serializer.StringDecoder decoder = new kafka.serializer.StringDecoder(new VerifiableProperties());
-				receivedData.put(message.getPartition().getNumber(),new KeyedMessageWithOffset(decodeKey(message, decoder), decodePayload(message, decoder), message.getOffset(), Thread.currentThread().getName(), message.getPartition().getNumber()));
+				receivedData.put(message.getPartition().getId(),new KeyedMessageWithOffset(decodeKey(message, decoder), decodePayload(message, decoder), message.getOffset(), Thread.currentThread().getName(), message.getPartition().getId()));
 				latch.countDown();
 			}
 		});

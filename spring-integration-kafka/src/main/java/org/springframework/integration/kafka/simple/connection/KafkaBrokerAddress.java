@@ -44,7 +44,6 @@ public class KafkaBrokerAddress {
 		this(host, DEFAULT_PORT);
 	}
 
-
 	public static KafkaBrokerAddress fromAddress(String address)  {
 		String[] split = address.split(":");
 		if (split.length == 0 || split.length > 2) {

@@ -27,6 +27,7 @@ import com.gs.collections.api.block.function.Function;
 import com.gs.collections.impl.block.factory.Functions;
 import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.map.mutable.UnifiedMap;
+import scala.collection.mutable.MutableList;
 
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
@@ -35,8 +36,6 @@ import org.springframework.util.Assert;
  * @author Marius Bogoevici
  */
 public class KafkaBrokerConnectionFactory implements InitializingBean {
-
-	private final FastList<KafkaBrokerAddress> kafkaBrokerAddresses;
 
 	private final KafkaConfiguration kafkaConfiguration;
 
@@ -48,11 +47,10 @@ public class KafkaBrokerConnectionFactory implements InitializingBean {
 
 	public KafkaBrokerConnectionFactory(KafkaConfiguration kafkaConfiguration) {
 		this.kafkaConfiguration = kafkaConfiguration;
-		this.kafkaBrokerAddresses = FastList.newList(kafkaConfiguration.getBrokerAddresses());
 	}
 
 	public List<KafkaBrokerAddress> getBrokerAddresses() {
-		return kafkaBrokerAddresses;
+		return kafkaConfiguration.getBrokerAddresses();
 	}
 
 	public KafkaConfiguration getKafkaConfiguration() {
@@ -62,7 +60,6 @@ public class KafkaBrokerConnectionFactory implements InitializingBean {
 	@Override
 	public void afterPropertiesSet() throws Exception {
 		Assert.notNull(kafkaConfiguration, "Kafka configuration cannot be empty");
-		Assert.notEmpty(kafkaBrokerAddresses, "A list of broker addressses must be supplied");
 		this.refreshLeaders();
 	}
 
@@ -105,7 +102,7 @@ public class KafkaBrokerConnectionFactory implements InitializingBean {
 			for (KafkaBrokerConnection kafkaBrokerConnection : kafkaBrokersCache) {
 				kafkaBrokerConnection.close();
 			}
-			Iterator<KafkaBrokerAddress> kafkaBrokerAddressIterator = kafkaBrokerAddresses.iterator();
+			Iterator<KafkaBrokerAddress> kafkaBrokerAddressIterator = kafkaConfiguration.getBrokerAddresses().iterator();
 			do {
 				KafkaBrokerConnection candidateConnection = this.createConnection(kafkaBrokerAddressIterator.next());
 				KafkaResult<KafkaBrokerAddress> leaders = candidateConnection.findLeaders();

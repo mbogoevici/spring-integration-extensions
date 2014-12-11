@@ -45,7 +45,6 @@ import com.gs.collections.impl.multimap.list.SynchronizedPutFastListMultimap;
 import com.gs.collections.impl.tuple.Tuples;
 import kafka.serializer.StringDecoder;
 import kafka.utils.VerifiableProperties;
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
 
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
@@ -83,7 +82,7 @@ public class AbstractMessageListenerContainerWithPartitionSubsetTest extends Abs
 			@Override
 			public void onMessage(KafkaMessage message) {
 				StringDecoder decoder = new StringDecoder(new VerifiableProperties());
-				receivedData.put(message.getPartition().getNumber(),new KeyedMessageWithOffset(decodeKey(message, decoder), decodePayload(message, decoder), message.getOffset(), Thread.currentThread().getName(), message.getPartition().getNumber()));
+				receivedData.put(message.getPartition().getId(),new KeyedMessageWithOffset(decodeKey(message, decoder), decodePayload(message, decoder), message.getOffset(), Thread.currentThread().getName(), message.getPartition().getId()));
 				latch.countDown();
 			}
 		});
