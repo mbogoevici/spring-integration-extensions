@@ -38,13 +38,11 @@ import com.gs.collections.api.map.MutableMap;
 import com.gs.collections.api.multimap.list.MutableListMultimap;
 import com.gs.collections.api.set.MutableSet;
 import com.gs.collections.api.tuple.Pair;
-import com.gs.collections.impl.block.factory.Procedures;
 import com.gs.collections.impl.factory.Sets;
 import com.gs.collections.impl.multimap.list.SynchronizedPutFastListMultimap;
 import com.gs.collections.impl.tuple.Tuples;
 import kafka.utils.VerifiableProperties;
 import org.hamcrest.Matchers;
-import scala.collection.JavaConversions;
 
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
@@ -58,19 +56,15 @@ import org.springframework.integration.kafka.simple.offset.MetadataStoreOffsetMa
 public class AbstractMessageListenerContainerTest extends AbstractSingleBrokerTest {
 
 	public void runMessageListenerTest(int maxReceiveSize, int concurrency, int partitionCount, int testMessageCount) throws Exception {
+
 		KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory = getKafkaBrokerConnectionFactory();
-
 		MetadataStoreOffsetManager offsetManager = new MetadataStoreOffsetManager(kafkaBrokerConnectionFactory);
-		offsetManager.afterPropertiesSet();
 		final KafkaMessageListenerContainer kafkaMessageListenerContainer = new KafkaMessageListenerContainer(kafkaBrokerConnectionFactory, offsetManager, new String[]{TEST_TOPIC});
-
 		kafkaMessageListenerContainer.setMaxSize(maxReceiveSize);
 		kafkaMessageListenerContainer.setConcurrency(concurrency);
 
 		final MutableListMultimap<Integer,KeyedMessageWithOffset> receivedData = new SynchronizedPutFastListMultimap<Integer, KeyedMessageWithOffset>();
-
 		final CountDownLatch latch = new CountDownLatch(testMessageCount);
-
 		kafkaMessageListenerContainer.setMessageListener(new MessageListener() {
 			@Override
 			public void onMessage(KafkaMessage message) {
@@ -80,17 +74,22 @@ public class AbstractMessageListenerContainerTest extends AbstractSingleBrokerTe
 			}
 		});
 
-		kafkaMessageListenerContainer.afterPropertiesSet();
 		kafkaMessageListenerContainer.start();
 
-		createStringProducer().send(JavaConversions.asScalaBuffer(createMessages(testMessageCount)));
-		latch.await((testMessageCount/5000), TimeUnit.MINUTES);
+		createStringProducer().send(createMessages(testMessageCount));
+
+		latch.await((testMessageCount/5000) + 1, TimeUnit.MINUTES);
 		kafkaMessageListenerContainer.stop();
 
 		assertThat(receivedData.valuesView().toList(), hasSize(testMessageCount));
 		assertThat(latch.getCount(), equalTo(0L));
 		System.out.println("All messages received ... checking ");
 
+		validateMessageReceipt(receivedData, concurrency, partitionCount, testMessageCount);
+
+	}
+
+	public void validateMessageReceipt(MutableListMultimap<Integer, KeyedMessageWithOffset> receivedData, int concurrency, int partitionCount, int testMessageCount) {
 		// Group messages received by processing thread
 		MutableListMultimap<String, KeyedMessageWithOffset> messagesByThread = receivedData.valuesView().toList().groupBy(new Function<KeyedMessageWithOffset, String>() {
 			@Override
@@ -161,7 +160,7 @@ public class AbstractMessageListenerContainerTest extends AbstractSingleBrokerTe
 			}
 		});
 
-		// Check that the sequence of offsets has been processed in ascending order
+		// Check that the sequence of offsets has been processed in ascending order, with no gaps
 		for (MutableList<Long> offsetsForPartition : offsetsByPartition.valuesView()) {
 			for (int i = 0; i < offsetsForPartition.size() - 1; i++) {
 				assertThat(offsetsForPartition.get(i+1), equalTo(offsetsForPartition.get(i) + 1));

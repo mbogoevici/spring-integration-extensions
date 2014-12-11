@@ -62,8 +62,7 @@ public class TestKafkaBrokerConnection extends AbstractSingleBrokerTest {
 	@Test
 	public void testReceiveMessages() throws Exception {
 		Producer<String, String> producer = createStringProducer();
-		List<KeyedMessage<String, String>> keyedMessages = createMessages(10);
-		producer.send(JavaConversions.asScalaBuffer(keyedMessages).toSeq());
+		producer.send( createMessages(10));
 		KafkaBrokerConnection brokerConnection = new KafkaBrokerConnection(kafkaRule.getBrokerAddress());
 		Partition partition = new Partition(TEST_TOPIC, 0);
 		KafkaMessageFetchRequest kafkaMessageFetchRequest = new KafkaMessageFetchRequest(partition, 0L, 1000);

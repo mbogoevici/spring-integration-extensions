@@ -71,12 +71,12 @@ public class AbstractSingleBrokerTest {
 		return new KafkaConfiguration(Collections.singletonList(kafkaRule.getBrokerAddress()));
 	}
 
-	public List<KeyedMessage<String, String>> createMessages(int count) {
+	public scala.collection.Seq<KeyedMessage<String, String>> createMessages(int count) {
 		List<KeyedMessage<String,String>> messages = new ArrayList<KeyedMessage<String, String>>();
 		for (int i=0; i<count; i++) {
 			messages.add(new KeyedMessage<String, String>(TEST_TOPIC, "Key " + i, "Message " + i));
 		}
-		return messages;
+		return JavaConversions.asScalaBuffer(messages).toSeq();
 	}
 
 	public Producer<String, String> createStringProducer() {
