@@ -24,9 +24,7 @@ import java.util.List;
 import com.gs.collections.api.RichIterable;
 import com.gs.collections.api.block.function.Function2;
 import com.gs.collections.api.multimap.Multimap;
-import com.gs.collections.api.multimap.MutableMultimap;
 import com.gs.collections.api.tuple.Pair;
-import com.gs.collections.impl.factory.Multimaps;
 import com.gs.collections.impl.tuple.Tuples;
 import kafka.admin.AdminUtils;
 import kafka.producer.KeyedMessage;
@@ -34,11 +32,10 @@ import kafka.producer.Producer;
 import kafka.serializer.StringEncoder;
 import kafka.utils.TestUtils;
 import kafka.utils.VerifiableProperties;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import scala.collection.JavaConversions;
-import scala.collection.immutable.List$;
 import scala.collection.Map;
+import scala.collection.immutable.List$;
 import scala.collection.immutable.Map$;
 import scala.collection.immutable.Seq;
 
@@ -55,8 +52,6 @@ public class AbstractSingleBrokerTest {
 	@ClassRule
 	public static KafkaSingleBrokerRule kafkaRule = new KafkaSingleBrokerRule();
 
-
-
 	public static void createTopic(String topicName, Multimap<Integer, Integer> partitionDistribution) {
 		AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK(kafkaRule.getZookeeperClient(), topicName, toKafkaPartitionMap(partitionDistribution), AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK$default$4(), AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK$default$5());
 		TestUtils.waitUntilMetadataIsPropagated(JavaConversions.asScalaBuffer(Collections.singletonList(kafkaRule.getKafkaServer())), TEST_TOPIC, 0, 5000L);
@@ -69,7 +64,6 @@ public class AbstractSingleBrokerTest {
 				return Tuples.pair((Object) argument1, List$.MODULE$.fromArray(argument2.toArray(new Object[0])).toSeq());
 			}
 		});
-
 		return Map$.MODULE$.apply(JavaConversions.asScalaMap(m).toSeq());
 	}
 
@@ -95,4 +89,5 @@ public class AbstractSingleBrokerTest {
 		kafkaBrokerConnectionFactory.afterPropertiesSet();
 		return kafkaBrokerConnectionFactory;
 	}
+
 }
