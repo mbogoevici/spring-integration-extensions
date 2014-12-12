@@ -17,6 +17,8 @@
 
 package org.springframework.integration.kafka.simple.listener;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,6 +28,7 @@ import com.gs.collections.api.block.function.Function0;
 import com.gs.collections.api.block.procedure.Procedure;
 import com.gs.collections.api.map.MutableMap;
 import com.gs.collections.impl.block.factory.Functions;
+import com.gs.collections.impl.factory.Maps;
 import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.map.mutable.UnifiedMap;
 
@@ -100,23 +103,20 @@ public class ConcurrentMessageListenerDispatcher implements Lifecycle {
 		synchronized (lifecycleMonitor) {
 			if (!isRunning()) {
 				final UnifiedMap<Integer, BlockingQueueMessageListenerExecutor> messageProcessorAllocator = UnifiedMap.newMap();
-				delegates = FastList.newListWith(partitions).toMap(Functions.<Partition>getPassThru(), new Function<Partition, BlockingQueueMessageListenerExecutor>() {
-					private AtomicInteger atomicInteger = new AtomicInteger(0);
-					@Override
-					public BlockingQueueMessageListenerExecutor valueOf(Partition object) {
-						return messageProcessorAllocator.getIfAbsentPut(atomicInteger.getAndIncrement() % consumers, new Function0<BlockingQueueMessageListenerExecutor>() {
-							@Override
-							public BlockingQueueMessageListenerExecutor value() {
-								BlockingQueueMessageListenerExecutor blockingQueueMessageListenerExecutor = new BlockingQueueMessageListenerExecutor(queueSize, offsetManager, delegateListener);
-								if (errorHandler != null) {
-									blockingQueueMessageListenerExecutor.setErrorHandler(errorHandler);
-								}
-								return blockingQueueMessageListenerExecutor;
-							}
-						});
+				// allocate delegates
+				List<BlockingQueueMessageListenerExecutor> delegateList = new ArrayList<BlockingQueueMessageListenerExecutor>(consumers);
+				for (int i = 0; i < consumers; i++) {
+					BlockingQueueMessageListenerExecutor blockingQueueMessageListenerExecutor = new BlockingQueueMessageListenerExecutor(queueSize, offsetManager, delegateListener);
+					if (errorHandler != null) {
+						blockingQueueMessageListenerExecutor.setErrorHandler(errorHandler);
 					}
-				});
-
+					delegateList.add(blockingQueueMessageListenerExecutor);
+				}
+				// map allocated delegates to partitions
+				delegates = Maps.mutable.of();
+				for (int i = 0; i < partitions.length; i++) {
+					delegates.put(partitions[i], delegateList.get(i % consumers));
+				}
 				if (this.taskExecutor == null) {
 					this.taskExecutor = Executors.newFixedThreadPool(consumers, new CustomizableThreadFactory("dispatcher-"));
 				}
