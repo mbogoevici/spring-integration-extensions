@@ -35,6 +35,7 @@ import kafka.utils.Utils;
 import kafka.utils.ZKStringSerializer$;
 import kafka.zk.EmbeddedZookeeper;
 import org.I0Itec.zkclient.ZkClient;
+import org.I0Itec.zkclient.exception.ZkInterruptedException;
 import org.junit.rules.ExternalResource;
 import scala.collection.JavaConversions;
 import scala.collection.mutable.Seq;
@@ -87,11 +88,31 @@ public class KafkaEmbeddedBrokerRule extends ExternalResource {
 	@Override
 	protected void after() {
 		for (KafkaServer kafkaServer : kafkaServers) {
-			kafkaServer.shutdown();
-			Utils.rm(kafkaServer.config().logDirs());
+			try {
+				kafkaServer.shutdown();
+			}
+			catch (Exception e) {
+				// do nothing
+			}
+			try {
+				Utils.rm(kafkaServer.config().logDirs());
+			}
+			catch (Exception e) {
+				// do nothing
+			}
 		}
-		zookeeperClient.close();
-		zookeeper.shutdown();
+		try {
+			zookeeperClient.close();
+		}
+		catch (ZkInterruptedException e) {
+			// do nothing
+		}
+		try {
+			zookeeper.shutdown();
+		}
+		catch (Exception e) {
+			// do nothing
+		}
 	}
 
 	public List<KafkaServer> getKafkaServers() {
