@@ -43,7 +43,7 @@ import org.springframework.integration.kafka.simple.connection.KafkaBrokerAddres
 /**
  * @author Marius Bogoevici
  */
-public class KafkaMultiBrokerRule extends ExternalResource {
+public class KafkaEmbeddedBrokerRule extends ExternalResource {
 
 	private int count;
 
@@ -56,7 +56,7 @@ public class KafkaMultiBrokerRule extends ExternalResource {
 	private ZkClient zookeeperClient;
 
 	@SuppressWarnings("unchecked")
-	public KafkaMultiBrokerRule(int count) {
+	public KafkaEmbeddedBrokerRule(int count) {
 		this.count = count;
 		this.kafkaPorts = JavaConversions.asJavaList((scala.collection.immutable.List) TestUtils.choosePorts(count));
 	}
@@ -70,7 +70,7 @@ public class KafkaMultiBrokerRule extends ExternalResource {
 		kafkaServers = new ArrayList<KafkaServer>();
 		for (int i = 0; i < count; i++) {
 			Properties brokerConfigProperties = TestUtils.createBrokerConfig(i, kafkaPorts.get(i));
-			//brokerConfigProperties.put("controlled.shutdown.enable", "true");
+			brokerConfigProperties.put("controlled.shutdown.enable", "true");
 			KafkaServer server = TestUtils.createServer(new KafkaConfig(brokerConfigProperties), SystemTime$.MODULE$);
 			kafkaServers.add(server);
 		}

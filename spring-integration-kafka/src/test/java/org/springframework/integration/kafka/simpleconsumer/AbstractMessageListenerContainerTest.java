@@ -17,6 +17,7 @@
 
 package org.springframework.integration.kafka.simpleconsumer;
 
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
@@ -25,6 +26,7 @@ import static org.junit.Assert.assertThat;
 import static org.springframework.integration.kafka.simple.util.MessageUtils.decodeKey;
 import static org.springframework.integration.kafka.simple.util.MessageUtils.decodePayload;
 
+import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -41,10 +43,12 @@ import com.gs.collections.api.tuple.Pair;
 import com.gs.collections.impl.factory.Sets;
 import com.gs.collections.impl.multimap.list.SynchronizedPutFastListMultimap;
 import com.gs.collections.impl.tuple.Tuples;
+import kafka.serializer.StringDecoder;
 import kafka.utils.VerifiableProperties;
 import org.hamcrest.Matchers;
 
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
+import org.springframework.integration.kafka.simple.connection.Partition;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
 import org.springframework.integration.kafka.simple.listener.KafkaMessageListenerContainer;
 import org.springframework.integration.kafka.simple.listener.MessageListener;
@@ -52,21 +56,29 @@ import org.springframework.integration.kafka.simple.listener.MessageListener;
 /**
  * @author Marius Bogoevici
  */
-public class AbstractMessageListenerContainerTest extends AbstractSingleBrokerTest {
+public abstract class AbstractMessageListenerContainerTest extends AbstractBrokerTest {
 
-	public void runMessageListenerTest(int maxReceiveSize, int concurrency, int partitionCount, int testMessageCount) throws Exception {
+	public void runMessageListenerTest(int maxReceiveSize, int concurrency, int partitionCount, int testMessageCount, int divisionFactor) throws Exception {
 
 		KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory = getKafkaBrokerConnectionFactory();
-		final KafkaMessageListenerContainer kafkaMessageListenerContainer = new KafkaMessageListenerContainer(kafkaBrokerConnectionFactory, new String[]{TEST_TOPIC});
+		ArrayList<Partition> readPartitions = new ArrayList<Partition>();
+		for (int i = 0; i < partitionCount; i++) {
+			if(i % divisionFactor == 0) {
+				readPartitions.add(new Partition(TEST_TOPIC, i));
+			}
+		}
+		final KafkaMessageListenerContainer kafkaMessageListenerContainer = new KafkaMessageListenerContainer(kafkaBrokerConnectionFactory, readPartitions.toArray(new Partition[readPartitions.size()]));
 		kafkaMessageListenerContainer.setMaxSize(maxReceiveSize);
 		kafkaMessageListenerContainer.setConcurrency(concurrency);
 
+		int expectedMessageCount = testMessageCount / divisionFactor;
+
 		final MutableListMultimap<Integer,KeyedMessageWithOffset> receivedData = new SynchronizedPutFastListMultimap<Integer, KeyedMessageWithOffset>();
-		final CountDownLatch latch = new CountDownLatch(testMessageCount);
+		final CountDownLatch latch = new CountDownLatch(expectedMessageCount);
 		kafkaMessageListenerContainer.setMessageListener(new MessageListener() {
 			@Override
 			public void onMessage(KafkaMessage message) {
-				kafka.serializer.StringDecoder decoder = new kafka.serializer.StringDecoder(new VerifiableProperties());
+				StringDecoder decoder = new StringDecoder(new VerifiableProperties());
 				receivedData.put(message.getPartition().getId(),new KeyedMessageWithOffset(decodeKey(message, decoder), decodePayload(message, decoder), message.getOffset(), Thread.currentThread().getName(), message.getPartition().getId()));
 				latch.countDown();
 			}
@@ -76,18 +88,18 @@ public class AbstractMessageListenerContainerTest extends AbstractSingleBrokerTe
 
 		createStringProducer().send(createMessages(testMessageCount));
 
-		latch.await((testMessageCount/5000) + 1, TimeUnit.MINUTES);
+		latch.await((expectedMessageCount/5000) + 1, TimeUnit.MINUTES);
 		kafkaMessageListenerContainer.stop();
 
-		assertThat(receivedData.valuesView().toList(), hasSize(testMessageCount));
+		assertThat(receivedData.valuesView().toList(), hasSize(expectedMessageCount));
 		assertThat(latch.getCount(), equalTo(0L));
 		System.out.println("All messages received ... checking ");
 
-		validateMessageReceipt(receivedData, concurrency, partitionCount, testMessageCount);
+		validateMessageReceipt(receivedData, concurrency, partitionCount, testMessageCount, expectedMessageCount, readPartitions, divisionFactor);
 
 	}
 
-	public void validateMessageReceipt(MutableListMultimap<Integer, KeyedMessageWithOffset> receivedData, int concurrency, int partitionCount, int testMessageCount) {
+	public void validateMessageReceipt(MutableListMultimap<Integer, KeyedMessageWithOffset> receivedData, int concurrency, int partitionCount, int testMessageCount, int expectedMessageCount, ArrayList<Partition> readPartitions, int divisionFactor) {
 		// Group messages received by processing thread
 		MutableListMultimap<String, KeyedMessageWithOffset> messagesByThread = receivedData.valuesView().toList().groupBy(new Function<KeyedMessageWithOffset, String>() {
 			@Override
@@ -122,9 +134,13 @@ public class AbstractMessageListenerContainerTest extends AbstractSingleBrokerTe
 			}
 		});
 
-		// All partitions are accounted for
+		// All partitions are accounted for, but only the ones that we were expecting to read from
 		for (int i = 0; i < partitionCount; i++) {
-			assertThat(validatedPartitions, hasItem(i));
+			if (i % divisionFactor == 0) {
+				assertThat(validatedPartitions, hasItem(i));
+			} else {
+				assertThat(validatedPartitions, not(hasItem(i)));
+			}
 		}
 
 		// Sort data by payload in order to identify duplicates
@@ -140,7 +156,7 @@ public class AbstractMessageListenerContainerTest extends AbstractSingleBrokerTe
 		duplicates.removeAll(sortedPayloads.toSet());
 
 		// The final set has exactly the same size as the message count
-		assertThat(sortedPayloads, hasSize(testMessageCount));
+		assertThat(sortedPayloads, hasSize(expectedMessageCount));
 
 		// There are no duplicates - all messages have been received only once
 		assertThat(duplicates, hasSize(0));
@@ -165,7 +181,6 @@ public class AbstractMessageListenerContainerTest extends AbstractSingleBrokerTe
 			}
 		}
 	}
-
 
 	static class KeyedMessageWithOffset {
 

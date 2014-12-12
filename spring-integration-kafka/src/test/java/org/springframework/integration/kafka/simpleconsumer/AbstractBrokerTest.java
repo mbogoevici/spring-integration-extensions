@@ -18,14 +18,15 @@
 package org.springframework.integration.kafka.simpleconsumer;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
 import com.gs.collections.api.RichIterable;
 import com.gs.collections.api.block.function.Function2;
 import com.gs.collections.api.multimap.Multimap;
+import com.gs.collections.api.multimap.MutableMultimap;
 import com.gs.collections.api.tuple.Pair;
+import com.gs.collections.impl.factory.Multimaps;
 import com.gs.collections.impl.tuple.Tuples;
 import kafka.admin.AdminUtils;
 import kafka.producer.KeyedMessage;
@@ -34,7 +35,7 @@ import kafka.producer.ProducerConfig;
 import kafka.serializer.StringEncoder;
 import kafka.utils.TestUtils;
 import kafka.utils.VerifiableProperties;
-import org.junit.ClassRule;
+import org.junit.Rule;
 import scala.collection.JavaConversions;
 import scala.collection.Map;
 import scala.collection.immutable.List$;
@@ -47,30 +48,31 @@ import org.springframework.integration.kafka.simple.connection.KafkaConfiguratio
 /**
  * @author Marius Bogoevici
  */
-public class AbstractSingleBrokerTest {
+public abstract class AbstractBrokerTest {
 
 	public static final String TEST_TOPIC = "test-topic";
 
-	@ClassRule
-	public static KafkaSingleBrokerRule kafkaRule = new KafkaSingleBrokerRule();
+	public abstract KafkaEmbeddedBrokerRule getKafkaRule();
 
-	public static void createTopic(String topicName, Multimap<Integer, Integer> partitionDistribution) {
-		AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK(kafkaRule.getZookeeperClient(), topicName, toKafkaPartitionMap(partitionDistribution), AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK$default$4(), AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK$default$5());
-		TestUtils.waitUntilMetadataIsPropagated(JavaConversions.asScalaBuffer(Collections.singletonList(kafkaRule.getKafkaServer())), TEST_TOPIC, 0, 5000L);
+	public void createTopic(String topicName, int partitionCount, int brokers, int replication) {
+		MutableMultimap<Integer, Integer> partitionDistribution = createPartitionDistribution(partitionCount, brokers, replication);
+		AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK(getKafkaRule().getZookeeperClient(), topicName, toKafkaPartitionMap(partitionDistribution), AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK$default$4(), AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK$default$5());
+		for (int i = 0; i < partitionDistribution.size(); i++) {
+			TestUtils.waitUntilMetadataIsPropagated(JavaConversions.asScalaBuffer(getKafkaRule().getKafkaServers()), TEST_TOPIC, i, 5000L);
+		}
 	}
 
-	public static Map toKafkaPartitionMap(Multimap<Integer, Integer> partitions) {
-		java.util.Map<Object, Seq<Object>> m = partitions.toMap().collect(new Function2<Integer, RichIterable<Integer>, Pair<Object, Seq<Object>>>() {
-			@Override
-			public Pair<Object, Seq<Object>> value(Integer argument1, RichIterable<Integer> argument2) {
-				return Tuples.pair((Object) argument1, List$.MODULE$.fromArray(argument2.toArray(new Object[0])).toSeq());
-			}
-		});
-		return Map$.MODULE$.apply(JavaConversions.asScalaMap(m).toSeq());
+	public MutableMultimap<Integer, Integer> createPartitionDistribution(int partitionCount, int brokers, int replication) {
+		MutableMultimap<Integer, Integer> partitionDistribution = Multimaps.mutable.list.with();
+		for (int i = 0; i < partitionCount; i++) {
+			partitionDistribution.put(i,0);
+		}
+		return partitionDistribution;
 	}
+
 
 	public KafkaConfiguration getKafkaConfiguration() {
-		return new KafkaConfiguration(Collections.singletonList(kafkaRule.getBrokerAddress()));
+		return new KafkaConfiguration(getKafkaRule().getBrokerAddresses());
 	}
 
 	public static scala.collection.Seq<KeyedMessage<String, String>> createMessages(int count) {
@@ -83,7 +85,7 @@ public class AbstractSingleBrokerTest {
 
 	public Producer<String, String> createStringProducer() {
 		StringEncoder encoder = new StringEncoder(new VerifiableProperties());
-		Properties producerConfig = TestUtils.getProducerConfig(kafkaRule.getKafkaServer().config().hostName() + ":" + kafkaRule.getKafkaServer().config().port(), "org.springframework.integration.kafka.simpleconsumer.TestPartitioner");
+		Properties producerConfig = TestUtils.getProducerConfig(getKafkaRule().getBrokersAsString(), "org.springframework.integration.kafka.simpleconsumer.TestPartitioner");
 		producerConfig.put("serializer.class", StringEncoder.class.getCanonicalName());
 		producerConfig.put("key.serializer.class",  StringEncoder.class.getCanonicalName());
 		return new Producer<String, String>(new ProducerConfig(producerConfig));
@@ -94,5 +96,16 @@ public class AbstractSingleBrokerTest {
 		kafkaBrokerConnectionFactory.afterPropertiesSet();
 		return kafkaBrokerConnectionFactory;
 	}
+
+	private Map toKafkaPartitionMap(Multimap<Integer, Integer> partitions) {
+		java.util.Map<Object, Seq<Object>> m = partitions.toMap().collect(new Function2<Integer, RichIterable<Integer>, Pair<Object, Seq<Object>>>() {
+			@Override
+			public Pair<Object, Seq<Object>> value(Integer argument1, RichIterable<Integer> argument2) {
+				return Tuples.pair((Object) argument1, List$.MODULE$.fromArray(argument2.toArray(new Object[0])).toSeq());
+			}
+		});
+		return Map$.MODULE$.apply(JavaConversions.asScalaMap(m).toSeq());
+	}
+
 
 }

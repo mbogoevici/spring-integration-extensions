@@ -17,16 +17,10 @@
 
 package org.springframework.integration.kafka.simpleconsumer;
 
-import java.util.List;
-
-import com.gs.collections.api.multimap.MutableMultimap;
-import com.gs.collections.impl.factory.Multimaps;
 import junit.framework.Assert;
-import kafka.producer.KeyedMessage;
 import kafka.producer.Producer;
-import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
-import scala.collection.JavaConversions;
 
 import org.springframework.integration.kafka.serializer.common.StringDecoder;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
@@ -40,18 +34,22 @@ import org.springframework.integration.kafka.simple.util.MessageUtils;
 /**
  * @author Marius Bogoevici
  */
-public class TestKafkaBrokerConnection extends AbstractSingleBrokerTest {
+public class TestKafkaBrokerConnection extends AbstractBrokerTest {
 
-	@BeforeClass
-	public static void setUp() throws Exception {
-		MutableMultimap<Integer, Integer> partitionDistribution = Multimaps.mutable.list.with();
-		partitionDistribution.put(0,0);
-		createTopic(TEST_TOPIC, partitionDistribution);
+	@Rule
+	public KafkaEmbeddedBrokerRule kafkaEmbeddedBrokerRule = new KafkaEmbeddedBrokerRule(1);
+
+	@Override
+	public KafkaEmbeddedBrokerRule getKafkaRule() {
+		return kafkaEmbeddedBrokerRule;
 	}
 
 	@Test
 	public void testFetchPartitionMetadata() throws Exception {
-		KafkaBrokerConnection brokerConnection = new KafkaBrokerConnection(kafkaRule.getBrokerAddress());
+
+		createTopic(TEST_TOPIC, 1, 1, 1);
+
+		KafkaBrokerConnection brokerConnection = new KafkaBrokerConnection(getKafkaRule().getBrokerAddresses().get(0));
 		Partition partition = new Partition(TEST_TOPIC, 0);
 		KafkaResult<Long> result = brokerConnection.fetchInitialOffset(-1, partition);
 		Assert.assertEquals(0, result.getErrors().size());
@@ -61,9 +59,12 @@ public class TestKafkaBrokerConnection extends AbstractSingleBrokerTest {
 
 	@Test
 	public void testReceiveMessages() throws Exception {
+
+		createTopic(TEST_TOPIC, 1, 1, 1);
+
 		Producer<String, String> producer = createStringProducer();
 		producer.send( createMessages(10));
-		KafkaBrokerConnection brokerConnection = new KafkaBrokerConnection(kafkaRule.getBrokerAddress());
+		KafkaBrokerConnection brokerConnection = new KafkaBrokerConnection(getKafkaRule().getBrokerAddresses().get(0));
 		Partition partition = new Partition(TEST_TOPIC, 0);
 		KafkaMessageFetchRequest kafkaMessageFetchRequest = new KafkaMessageFetchRequest(partition, 0L, 1000);
 		KafkaResult<KafkaMessageBatch> result = brokerConnection.fetch(kafkaMessageFetchRequest);

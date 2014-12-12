@@ -22,19 +22,10 @@ import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
 import static org.junit.Assert.assertThat;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Properties;
 
-import com.gs.collections.api.multimap.MutableMultimap;
-import com.gs.collections.impl.factory.Multimaps;
-import kafka.admin.AdminUtils;
-import kafka.utils.TestUtils;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
-import scala.Option;
-import scala.collection.JavaConversions;
 
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerAddress;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
@@ -46,25 +37,29 @@ import org.springframework.integration.kafka.simple.connection.Partition;
 /**
  * @author Marius Bogoevici
  */
-public class TestKafkaConnectionFactory extends AbstractSingleBrokerTest {
+public class TestKafkaConnectionFactory extends AbstractBrokerTest {
 
-	@BeforeClass
-	public static void setUp() throws Exception {
-		MutableMultimap<Integer, Integer> partitionDistribution = Multimaps.mutable.list.with();
-		partitionDistribution.put(0,0);
-		createTopic(TEST_TOPIC, partitionDistribution);
+	@Rule
+	public KafkaEmbeddedBrokerRule kafkaEmbeddedBrokerRule = new KafkaEmbeddedBrokerRule(1);
+
+	@Override
+	public KafkaEmbeddedBrokerRule getKafkaRule() {
+		return kafkaEmbeddedBrokerRule;
 	}
 
 	@Test
 	public void testCreateConnectionFactory() throws Exception {
-		List<KafkaBrokerAddress> brokerAddresses = Collections.singletonList(kafkaRule.getBrokerAddress());
+
+		createTopic(TEST_TOPIC, 1, 1, 1);
+
+		List<KafkaBrokerAddress> brokerAddresses = getKafkaRule().getBrokerAddresses();
 		Partition partition = new Partition(TEST_TOPIC, 0);
 		KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory = new KafkaBrokerConnectionFactory(new KafkaConfiguration(brokerAddresses));
 		kafkaBrokerConnectionFactory.afterPropertiesSet();
-		KafkaBrokerConnection connection = kafkaBrokerConnectionFactory.createConnection(kafkaRule.getBrokerAddress());
+		KafkaBrokerConnection connection = kafkaBrokerConnectionFactory.createConnection(getKafkaRule().getBrokerAddresses().get(0));
 		KafkaResult<KafkaBrokerAddress> leaders = connection.findLeaders(TEST_TOPIC);
 		assertThat(leaders.getErrors().entrySet(), empty());
 		assertThat(leaders.getResult().entrySet(), hasSize(1));
-		assertThat(leaders.getResult().get(partition), equalTo(kafkaRule.getBrokerAddress()));
+		assertThat(leaders.getResult().get(partition), equalTo(getKafkaRule().getBrokerAddresses().get(0)));
 	}
 }
