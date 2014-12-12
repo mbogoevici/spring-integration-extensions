@@ -95,7 +95,6 @@ public abstract class AbstractBrokerTest {
 	}
 
 	public Producer<String, String> createStringProducer() {
-		StringEncoder encoder = new StringEncoder(new VerifiableProperties());
 		Properties producerConfig = TestUtils.getProducerConfig(getKafkaRule().getBrokersAsString(), "org.springframework.integration.kafka.simpleconsumer.TestPartitioner");
 		producerConfig.put("serializer.class", StringEncoder.class.getCanonicalName());
 		producerConfig.put("key.serializer.class",  StringEncoder.class.getCanonicalName());
