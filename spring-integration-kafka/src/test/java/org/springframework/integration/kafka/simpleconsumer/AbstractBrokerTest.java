@@ -17,6 +17,8 @@
 
 package org.springframework.integration.kafka.simpleconsumer;
 
+import static scala.collection.JavaConversions.asScalaBuffer;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -35,6 +37,7 @@ import kafka.producer.ProducerConfig;
 import kafka.serializer.StringEncoder;
 import kafka.utils.TestUtils;
 import kafka.utils.VerifiableProperties;
+import org.junit.After;
 import org.junit.Rule;
 import scala.collection.JavaConversions;
 import scala.collection.Map;
@@ -54,18 +57,26 @@ public abstract class AbstractBrokerTest {
 
 	public abstract KafkaEmbeddedBrokerRule getKafkaRule();
 
+	@After
+	public void cleanUpTopic() {
+		AdminUtils.deleteTopic(getKafkaRule().getZookeeperClient(), TEST_TOPIC);
+		TestUtils.waitUntilMetadataIsPropagated(asScalaBuffer(getKafkaRule().getKafkaServers()), TEST_TOPIC, 0, 5000L);
+	}
+
 	public void createTopic(String topicName, int partitionCount, int brokers, int replication) {
 		MutableMultimap<Integer, Integer> partitionDistribution = createPartitionDistribution(partitionCount, brokers, replication);
 		AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK(getKafkaRule().getZookeeperClient(), topicName, toKafkaPartitionMap(partitionDistribution), AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK$default$4(), AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK$default$5());
-		for (int i = 0; i < partitionDistribution.size(); i++) {
-			TestUtils.waitUntilMetadataIsPropagated(JavaConversions.asScalaBuffer(getKafkaRule().getKafkaServers()), TEST_TOPIC, i, 5000L);
+		for (int i = 0; i < partitionDistribution.keysView().size(); i++) {
+			TestUtils.waitUntilMetadataIsPropagated(asScalaBuffer(getKafkaRule().getKafkaServers()), TEST_TOPIC, i, 5000L);
 		}
 	}
 
 	public MutableMultimap<Integer, Integer> createPartitionDistribution(int partitionCount, int brokers, int replication) {
 		MutableMultimap<Integer, Integer> partitionDistribution = Multimaps.mutable.list.with();
 		for (int i = 0; i < partitionCount; i++) {
-			partitionDistribution.put(i,0);
+			for (int j = 0; j < replication; j++) {
+				partitionDistribution.put(i, (i + j) % brokers);
+			}
 		}
 		return partitionDistribution;
 	}
@@ -80,7 +91,7 @@ public abstract class AbstractBrokerTest {
 		for (int i=0; i<count; i++) {
 			messages.add(new KeyedMessage<String, String>(TEST_TOPIC, "Key " + i, i, "Message " + i));
 		}
-		return JavaConversions.asScalaBuffer(messages).toSeq();
+		return asScalaBuffer(messages).toSeq();
 	}
 
 	public Producer<String, String> createStringProducer() {

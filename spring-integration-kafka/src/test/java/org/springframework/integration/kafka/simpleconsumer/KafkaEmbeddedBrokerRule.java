@@ -25,6 +25,7 @@ import java.util.Properties;
 import com.gs.collections.api.block.function.Function;
 import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.utility.ListIterate;
+import kafka.admin.AdminUtils;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import kafka.utils.SystemTime$;
@@ -47,6 +48,8 @@ public class KafkaEmbeddedBrokerRule extends ExternalResource {
 
 	private int count;
 
+	private boolean controlledShutdown;
+
 	private List<Integer> kafkaPorts;
 
 	private List<KafkaServer> kafkaServers;
@@ -56,9 +59,14 @@ public class KafkaEmbeddedBrokerRule extends ExternalResource {
 	private ZkClient zookeeperClient;
 
 	@SuppressWarnings("unchecked")
-	public KafkaEmbeddedBrokerRule(int count) {
+	public KafkaEmbeddedBrokerRule(int count, boolean controlledShutdown) {
 		this.count = count;
+		this.controlledShutdown = controlledShutdown;
 		this.kafkaPorts = JavaConversions.asJavaList((scala.collection.immutable.List) TestUtils.choosePorts(count));
+	}
+
+	public KafkaEmbeddedBrokerRule(int count) {
+		this(count, false);
 	}
 
 	@Override
@@ -70,7 +78,7 @@ public class KafkaEmbeddedBrokerRule extends ExternalResource {
 		kafkaServers = new ArrayList<KafkaServer>();
 		for (int i = 0; i < count; i++) {
 			Properties brokerConfigProperties = TestUtils.createBrokerConfig(i, kafkaPorts.get(i));
-			brokerConfigProperties.put("controlled.shutdown.enable", "true");
+			brokerConfigProperties.put("controlled.shutdown.enable", Boolean.toString(controlledShutdown));
 			KafkaServer server = TestUtils.createServer(new KafkaConfig(brokerConfigProperties), SystemTime$.MODULE$);
 			kafkaServers.add(server);
 		}
@@ -109,6 +117,14 @@ public class KafkaEmbeddedBrokerRule extends ExternalResource {
 				return new KafkaBrokerAddress(kafkaServer.config().hostName(), kafkaServer.config().port());
 			}
 		});
+	}
+
+	public void bounce(KafkaBrokerAddress kafkaBrokerAddress) {
+		for (KafkaServer kafkaServer : getKafkaServers()) {
+			if (kafkaBrokerAddress.equals(new KafkaBrokerAddress(kafkaServer.config().hostName(), kafkaServer.config().port()))) {
+				kafkaServer.shutdown();
+			}
+		}
 	}
 
 	public String getBrokersAsString() {

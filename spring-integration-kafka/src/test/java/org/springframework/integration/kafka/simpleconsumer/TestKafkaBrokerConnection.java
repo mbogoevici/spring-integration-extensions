@@ -46,9 +46,7 @@ public class TestKafkaBrokerConnection extends AbstractBrokerTest {
 
 	@Test
 	public void testFetchPartitionMetadata() throws Exception {
-
 		createTopic(TEST_TOPIC, 1, 1, 1);
-
 		KafkaBrokerConnection brokerConnection = new KafkaBrokerConnection(getKafkaRule().getBrokerAddresses().get(0));
 		Partition partition = new Partition(TEST_TOPIC, 0);
 		KafkaResult<Long> result = brokerConnection.fetchInitialOffset(-1, partition);
@@ -59,9 +57,7 @@ public class TestKafkaBrokerConnection extends AbstractBrokerTest {
 
 	@Test
 	public void testReceiveMessages() throws Exception {
-
 		createTopic(TEST_TOPIC, 1, 1, 1);
-
 		Producer<String, String> producer = createStringProducer();
 		producer.send( createMessages(10));
 		KafkaBrokerConnection brokerConnection = new KafkaBrokerConnection(getKafkaRule().getBrokerAddresses().get(0));
