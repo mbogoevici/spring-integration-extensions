@@ -98,6 +98,14 @@ public class KafkaBrokerAddress {
 	public int hashCode() {
 		return 31 * host.hashCode() + port;
 	}
+
+	@Override
+	public String toString() {
+		return "KafkaBrokerAddress{" +
+				"host='" + host + '\'' +
+				", port=" + port +
+				'}';
+	}
 }
 
 

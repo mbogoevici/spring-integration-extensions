@@ -159,11 +159,12 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 	@Override
 	public void start() {
 		synchronized (lifecycleMonitor) {
-			if (this.offsetManager == null) {
-				this.offsetManager = new MetadataStoreOffsetManager(kafkaTemplate.getKafkaBrokerConnectionFactory());
-			}
-			this.nextFetchOffsets = new ConcurrentHashMap<Partition, Long>(this.partitions.toMap(passThru, getOffset));
 			if (!running) {
+				this.running = true;
+				if (this.offsetManager == null) {
+					this.offsetManager = new MetadataStoreOffsetManager(kafkaTemplate.getKafkaBrokerConnectionFactory());
+				}
+				this.nextFetchOffsets = new ConcurrentHashMap<Partition, Long>(this.partitions.toMap(passThru, getOffset));
 				this.messageDispatcher = new ConcurrentMessageListenerDispatcher(messageListener, partitions.toArray(new Partition[partitions.size()]), concurrency, offsetManager);
 				this.messageDispatcher.start();
 				MutableMap<KafkaBrokerAddress, RichIterable<Partition>> partitionsByBrokerMap = this.partitions.groupBy(getLeader).toMap();
@@ -171,7 +172,6 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 					taskExecutor = Executors.newFixedThreadPool(partitionsByBrokerMap.size());
 				}
 				partitionsByBrokerMap.forEachKeyValue(launchFetchTask);
-				this.running = true;
 			}
 		}
 	}
@@ -183,9 +183,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 
 	@Override
 	public boolean isRunning() {
-		synchronized (lifecycleMonitor) {
 			return this.running;
-		}
 	}
 
 	@Override
@@ -210,8 +208,9 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 		public void run() {
 			KafkaMessageListenerContainer kafkaMessageListenerContainer = KafkaMessageListenerContainer.this;
 			while (running) {
-				Set<Partition> partitionsWithRemainingData = new HashSet<Partition>();
+				Set<Partition> partitionsWithRemainingData;
 				do {
+					partitionsWithRemainingData = new HashSet<Partition>();
 					Iterable<KafkaMessageBatch> receive = kafkaTemplate.receive(this.partitions.collect(new Function<Partition, KafkaMessageFetchRequest>() {
 						@Override
 						public KafkaMessageFetchRequest valueOf(Partition partition) {
@@ -238,10 +237,6 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 				}
 				catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
-					if (!kafkaMessageListenerContainer.running) {
-						// no longer running
-						return;
-					}
 				}
 			}
 		}
