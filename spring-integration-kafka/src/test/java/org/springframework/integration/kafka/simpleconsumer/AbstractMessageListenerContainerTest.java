@@ -58,7 +58,7 @@ import org.springframework.integration.kafka.simple.listener.MessageListener;
  */
 public abstract class AbstractMessageListenerContainerTest extends AbstractBrokerTest {
 
-	public void runMessageListenerTest(int maxReceiveSize, int concurrency, int partitionCount, int testMessageCount, int divisionFactor) throws Exception {
+	public void runMessageListenerTest(int maxReceiveSize, int concurrency, int partitionCount, int testMessageCount, int divisionFactor, int compressionCodec) throws Exception {
 
 		KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory = getKafkaBrokerConnectionFactory();
 		ArrayList<Partition> readPartitions = new ArrayList<Partition>();
@@ -86,7 +86,7 @@ public abstract class AbstractMessageListenerContainerTest extends AbstractBroke
 
 		kafkaMessageListenerContainer.start();
 
-		createStringProducer().send(createMessages(testMessageCount));
+		createStringProducer(compressionCodec).send(createMessages(testMessageCount));
 
 		latch.await((expectedMessageCount/5000) + 1, TimeUnit.MINUTES);
 		kafkaMessageListenerContainer.stop();

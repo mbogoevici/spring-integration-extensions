@@ -94,10 +94,11 @@ public abstract class AbstractBrokerTest {
 		return asScalaBuffer(messages).toSeq();
 	}
 
-	public Producer<String, String> createStringProducer() {
+	public Producer<String, String> createStringProducer(int compression) {
 		Properties producerConfig = TestUtils.getProducerConfig(getKafkaRule().getBrokersAsString(), "org.springframework.integration.kafka.simpleconsumer.TestPartitioner");
 		producerConfig.put("serializer.class", StringEncoder.class.getCanonicalName());
 		producerConfig.put("key.serializer.class",  StringEncoder.class.getCanonicalName());
+		producerConfig.put("compression.codec",  Integer.toString(compression));
 		return new Producer<String, String>(new ProducerConfig(producerConfig));
 	}
 

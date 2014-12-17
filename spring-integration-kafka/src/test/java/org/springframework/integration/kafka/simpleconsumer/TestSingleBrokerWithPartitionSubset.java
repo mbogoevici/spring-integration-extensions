@@ -37,56 +37,56 @@ public class TestSingleBrokerWithPartitionSubset extends AbstractMessageListener
 	@Test
 	public void testLowVolumeLowConcurrency() throws Exception {
 		createTopic(TEST_TOPIC, 4, 1, 1);
-		runMessageListenerTest(100, 2, 4, 100, 2);
+		runMessageListenerTest(100, 2, 4, 100, 2, 0);
 	}
 
 	@Test
 	public void testMediumVolumeLowConcurrency() throws Exception {
 		createTopic(TEST_TOPIC, 4, 1, 1);
-		runMessageListenerTest(100, 2, 4, 1000, 2);
+		runMessageListenerTest(100, 2, 4, 1000, 2, 0);
 	}
 
 	@Test @Ignore
 	public void testHighVolumeLowConcurrency() throws Exception {
 		createTopic(TEST_TOPIC, 4, 1, 1);
-		runMessageListenerTest(100, 2, 4, 10000, 2);
+		runMessageListenerTest(100, 2, 4, 10000, 2, 0);
 	}
 
 	@Test
 	public void testLowVolumeMediumConcurrency() throws Exception {
 		createTopic(TEST_TOPIC, 10, 1, 1);
-		runMessageListenerTest(100, 5, 10, 100, 2);
+		runMessageListenerTest(100, 5, 10, 100, 2, 0);
 	}
 
 	@Test
 	public void testMediumVolumeMediumConcurrency() throws Exception {
 		createTopic(TEST_TOPIC, 10, 1, 1);
-		runMessageListenerTest(100, 5, 10, 1000, 2);
+		runMessageListenerTest(100, 5, 10, 1000, 2, 0);
 	}
 
 	@Test @Ignore
 	public void testHighVolumeMediumConcurrency() throws Exception {
 		createTopic(TEST_TOPIC, 10, 1, 1);
-		runMessageListenerTest(100, 5, 10, 100000, 2);
+		runMessageListenerTest(100, 5, 10, 100000, 2, 0);
 	}
 
 
 	@Test
 	public void testLowVolumeHighConcurrency() throws Exception {
 		createTopic(TEST_TOPIC, 100, 1, 1);
-		runMessageListenerTest(100, 20, 100, 1000, 2);
+		runMessageListenerTest(100, 20, 100, 1000, 2, 0);
 	}
 
 	@Test
 	public void testMediumVolumeHighConcurrency() throws Exception {
 		createTopic(TEST_TOPIC, 100, 1, 1);
-		runMessageListenerTest(100, 20, 100, 10000, 2);
+		runMessageListenerTest(100, 20, 100, 10000, 2, 0);
 	}
 
 	@Test @Ignore
 	public void testHighVolumeHighConcurrency() throws Exception {
 		createTopic(TEST_TOPIC, 100, 1, 1);
-		runMessageListenerTest(100, 20, 100, 100000, 2);
+		runMessageListenerTest(100, 20, 100, 100000, 2, 0);
 	}
 
 

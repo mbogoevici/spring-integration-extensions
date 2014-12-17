@@ -58,7 +58,51 @@ public class TestKafkaBrokerConnection extends AbstractBrokerTest {
 	@Test
 	public void testReceiveMessages() throws Exception {
 		createTopic(TEST_TOPIC, 1, 1, 1);
-		Producer<String, String> producer = createStringProducer();
+		Producer<String, String> producer = createStringProducer(0);
+		producer.send( createMessages(10));
+		KafkaBrokerConnection brokerConnection = new KafkaBrokerConnection(getKafkaRule().getBrokerAddresses().get(0));
+		Partition partition = new Partition(TEST_TOPIC, 0);
+		KafkaMessageFetchRequest kafkaMessageFetchRequest = new KafkaMessageFetchRequest(partition, 0L, 1000);
+		KafkaResult<KafkaMessageBatch> result = brokerConnection.fetch(kafkaMessageFetchRequest);
+		Assert.assertEquals(0, result.getErrors().size());
+		Assert.assertEquals(1, result.getResult().size());
+		Assert.assertEquals(10, result.getResult().get(partition).getMessages().size());
+		Assert.assertEquals(10,result.getResult().get(partition).getHighWatermark());
+		StringDecoder decoder = new StringDecoder();
+		int i = 0;
+		for (KafkaMessage kafkaMessage : result.getResult().get(partition).getMessages()) {
+			Assert.assertEquals("Key " + i, MessageUtils.decodeKey(kafkaMessage, decoder));
+			Assert.assertEquals("Message " + i, MessageUtils.decodePayload(kafkaMessage, decoder));
+			i++;
+		}
+	}
+
+	@Test
+	public void testReceiveMessagesWithCompression1() throws Exception {
+		createTopic(TEST_TOPIC, 1, 1, 1);
+		Producer<String, String> producer = createStringProducer(1);
+		producer.send( createMessages(10));
+		KafkaBrokerConnection brokerConnection = new KafkaBrokerConnection(getKafkaRule().getBrokerAddresses().get(0));
+		Partition partition = new Partition(TEST_TOPIC, 0);
+		KafkaMessageFetchRequest kafkaMessageFetchRequest = new KafkaMessageFetchRequest(partition, 0L, 1000);
+		KafkaResult<KafkaMessageBatch> result = brokerConnection.fetch(kafkaMessageFetchRequest);
+		Assert.assertEquals(0, result.getErrors().size());
+		Assert.assertEquals(1, result.getResult().size());
+		Assert.assertEquals(10, result.getResult().get(partition).getMessages().size());
+		Assert.assertEquals(10,result.getResult().get(partition).getHighWatermark());
+		StringDecoder decoder = new StringDecoder();
+		int i = 0;
+		for (KafkaMessage kafkaMessage : result.getResult().get(partition).getMessages()) {
+			Assert.assertEquals("Key " + i, MessageUtils.decodeKey(kafkaMessage, decoder));
+			Assert.assertEquals("Message " + i, MessageUtils.decodePayload(kafkaMessage, decoder));
+			i++;
+		}
+	}
+
+	@Test
+	public void testReceiveMessagesWithCompression2() throws Exception {
+		createTopic(TEST_TOPIC, 1, 1, 1);
+		Producer<String, String> producer = createStringProducer(2);
 		producer.send( createMessages(10));
 		KafkaBrokerConnection brokerConnection = new KafkaBrokerConnection(getKafkaRule().getBrokerAddresses().get(0));
 		Partition partition = new Partition(TEST_TOPIC, 0);
