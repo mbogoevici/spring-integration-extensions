@@ -26,12 +26,12 @@ import com.gs.collections.api.list.MutableList;
 import com.gs.collections.impl.list.mutable.FastList;
 import com.gs.collections.impl.utility.ArrayIterate;
 
+import org.springframework.integration.kafka.simple.connection.KafkaBrokerAddress;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
 import org.springframework.integration.kafka.simple.connection.KafkaResult;
-import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
-import org.springframework.integration.kafka.simple.connection.KafkaBrokerAddress;
-import org.springframework.integration.kafka.simple.consumer.KafkaMessageBatch;
 import org.springframework.integration.kafka.simple.connection.Partition;
+import org.springframework.integration.kafka.simple.consumer.KafkaMessageBatch;
+import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
 
 
 /**
