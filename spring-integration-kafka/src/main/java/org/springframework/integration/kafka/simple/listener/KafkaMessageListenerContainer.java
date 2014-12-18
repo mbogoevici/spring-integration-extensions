@@ -82,7 +82,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 
 	private OffsetManager offsetManager;
 
-	private ConcurrentMap<Partition, Long> nextFetchOffsets;
+	private ConcurrentMap<Partition, Long> fetchOffsets;
 
 	private ConcurrentMessageListenerDispatcher messageDispatcher;
 
@@ -164,7 +164,8 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 				if (this.offsetManager == null) {
 					this.offsetManager = new MetadataStoreOffsetManager(kafkaTemplate.getKafkaBrokerConnectionFactory());
 				}
-				this.nextFetchOffsets = new ConcurrentHashMap<Partition, Long>(this.partitions.toMap(passThru, getOffset));
+				// initialize the fetch offset table - defer to OffsetManager for retrieving them
+				this.fetchOffsets = new ConcurrentHashMap<Partition, Long>(this.partitions.toMap(passThru, getOffset));
 				this.messageDispatcher = new ConcurrentMessageListenerDispatcher(messageListener, partitions.toArray(new Partition[partitions.size()]), concurrency, offsetManager);
 				this.messageDispatcher.start();
 				MutableMap<KafkaBrokerAddress, RichIterable<Partition>> partitionsByBrokerMap = this.partitions.groupBy(getLeader).toMap();
@@ -196,6 +197,10 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 		return partitionList.toArray(new Partition[partitionList.size()]);
 	}
 
+	/**
+	 * Fetches data from Kafka for a group of partitions, located on the same broker.
+	 *
+	 */
 	public class FetchTask implements Runnable {
 
 		private MutableList<Partition> partitions;
@@ -214,17 +219,21 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 					Iterable<KafkaMessageBatch> receive = kafkaTemplate.receive(this.partitions.collect(new Function<Partition, KafkaMessageFetchRequest>() {
 						@Override
 						public KafkaMessageFetchRequest valueOf(Partition partition) {
-							return new KafkaMessageFetchRequest(partition, nextFetchOffsets.get(partition), maxSize);
+							return new KafkaMessageFetchRequest(partition, fetchOffsets.get(partition), maxSize);
 						}
 					}).toArray(new KafkaMessageFetchRequest[0]));
 					for (KafkaMessageBatch batch : receive) {
 						if (!batch.getMessages().isEmpty()) {
 							long highestFetchedOffset = 0;
 							for (KafkaMessage kafkaMessage : batch.getMessages()) {
-								messageDispatcher.dispatch(kafkaMessage);
+								// fetch operations may return entire blocks of compressed messages, which may have lower offsets than the ones requested
+								// thus a batch may contain messages that have been processed already
+								if (kafkaMessage.getOffset() >= fetchOffsets.get(batch.getPartition())) {
+									messageDispatcher.dispatch(kafkaMessage);
+								}
 								highestFetchedOffset = Math.max(highestFetchedOffset, kafkaMessage.getNextOffset());
 							}
-							nextFetchOffsets.replace(batch.getPartition(), highestFetchedOffset);
+							fetchOffsets.replace(batch.getPartition(), highestFetchedOffset);
 							// if there are still messages on server, we can go on and retrieve more
 							if (highestFetchedOffset < batch.getHighWatermark()) {
 								partitionsWithRemainingData.add(batch.getPartition());
