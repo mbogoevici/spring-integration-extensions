@@ -28,18 +28,16 @@ import com.gs.collections.api.map.MutableMap;
 import com.gs.collections.api.multimap.MutableMultimap;
 import com.gs.collections.impl.map.mutable.ConcurrentHashMap;
 import com.gs.collections.impl.utility.Iterate;
-import com.gs.collections.impl.utility.MapIterate;
-import com.gs.collections.impl.utility.internal.SetIterate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerAddress;
-import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnection;
 import org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory;
 import org.springframework.integration.kafka.simple.connection.KafkaResult;
 import org.springframework.integration.kafka.simple.connection.Partition;
 import org.springframework.integration.metadata.MetadataStore;
 import org.springframework.integration.metadata.SimpleMetadataStore;
+import org.springframework.util.CollectionUtils;
 
 /**
  * An {@link org.springframework.integration.kafka.simple.offset.OffsetManager} that persists offsets into
@@ -62,8 +60,12 @@ public class MetadataStoreOffsetManager implements OffsetManager {
 	private MutableMap<Partition, Long> offsets = new ConcurrentHashMap<Partition, Long>();
 
 	public MetadataStoreOffsetManager(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory) {
+		this(kafkaBrokerConnectionFactory, null);
+	}
+
+	public MetadataStoreOffsetManager(KafkaBrokerConnectionFactory kafkaBrokerConnectionFactory, Map<Partition, Long> initialOffsets) {
 		this.kafkaBrokerConnectionFactory = kafkaBrokerConnectionFactory;
-		loadOffsets();
+		loadOffsets(initialOffsets);
 	}
 
 	public String getConsumerId() {
@@ -101,26 +103,32 @@ public class MetadataStoreOffsetManager implements OffsetManager {
 		return offsets.get(partition);
 	}
 
-	private void loadOffsets() {
-		this.offsets = new ConcurrentHashMap<Partition, Long>();
+	private void loadOffsets(Map<Partition, Long> initialOffsets) {
+		if (!CollectionUtils.isEmpty(initialOffsets)) {
+			this.offsets = ConcurrentHashMap.newMap(initialOffsets);
+		} else {
+			this.offsets = ConcurrentHashMap.newMap();
+		}
 		List<Partition> partitionsRequiringInitialOffsets = new ArrayList<Partition>();
 		for (Partition partition : kafkaBrokerConnectionFactory.getPartitions()) {
-			String storedOffsetValueAsString = this.metadataStore.get(asKey(partition));
-			Long storedOffsetValue = null;
-			if (storedOffsetValueAsString != null) {
-				try {
-					storedOffsetValue = Long.parseLong(storedOffsetValueAsString);
+			if (!this.offsets.containsKey(partition)) {
+				String storedOffsetValueAsString = this.metadataStore.get(asKey(partition));
+				Long storedOffsetValue = null;
+				if (storedOffsetValueAsString != null) {
+					try {
+						storedOffsetValue = Long.parseLong(storedOffsetValueAsString);
+					}
+					catch (NumberFormatException e) {
+						LOG.warn("Invalid value: " + storedOffsetValue);
+					}
 				}
-				catch (NumberFormatException e) {
-					LOG.warn("Invalid key: " + storedOffsetValue);
+				if (storedOffsetValue != null) {
+					offsets.put(partition, storedOffsetValue);
+				} else {
+					partitionsRequiringInitialOffsets.add(partition);
 				}
 			}
-			if (storedOffsetValue != null) {
-				offsets.put(partition, storedOffsetValue);
-			} else {
-				partitionsRequiringInitialOffsets.add(partition);
-			}
- 		}
+		}
 		if (partitionsRequiringInitialOffsets.size() > 0) {
 			MutableMultimap<KafkaBrokerAddress, Partition> partitionsByLeaderAddress = Iterate.groupBy(partitionsRequiringInitialOffsets, new Function<Partition, KafkaBrokerAddress>() {
 				@Override
