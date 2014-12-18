@@ -12,29 +12,29 @@
 	<int:channel id="input"/>
 
 	<util:list id="kafkaBrokerAddresses">
-		<bean class="org.springframework.integration.kafka.simple.connection.KafkaBrokerAddress">
+		<bean class="org.springframework.integration.kafka.core.KafkaBrokerAddress">
 			<constructor-arg index="0" value="localhost"/>
 			<constructor-arg index="1" value="9092"/>
 		</bean>
 	</util:list>
 
 	<util:list id="partitions">
-		<bean class="org.springframework.integration.kafka.simple.connection.Partition">
+		<bean class="org.springframework.integration.kafka.core.Partition">
 			<constructor-arg index="0" value="kafka-source-test"/>
 			<constructor-arg index="1" value="0"/>
 		</bean>
 	</util:list>
 
-	<bean id="kafkaConfiguration" class="org.springframework.integration.kafka.simple.connection.KafkaConfiguration">
+	<bean id="kafkaConfiguration" class="org.springframework.integration.kafka.core.KafkaConfiguration">
 		<constructor-arg index="0" ref="kafkaBrokerAddresses"/>
 		<constructor-arg index="1" ref="partitions"/>
 	</bean>
 
-	<bean id="connectionFactory" class="org.springframework.integration.kafka.simple.connection.KafkaBrokerConnectionFactory">
+	<bean id="connectionFactory" class="org.springframework.integration.kafka.core.KafkaBrokerConnectionFactory">
 		<constructor-arg index="0" ref="kafkaConfiguration"/>
 	</bean>
 
-	<bean id="offsetManager" class="org.springframework.integration.kafka.simple.offset.MetadataStoreOffsetManager">
+	<bean id="offsetManager" class="org.springframework.integration.kafka.listener.MetadataStoreOffsetManager">
 		<constructor-arg index="0" ref="connectionFactory"/>
 		<constructor-arg index="1">
 			<bean class="org.springframework.integration.metadata.SimpleMetadataStore"/>
@@ -45,7 +45,7 @@
 		<constructor-arg index="2" value="-2"/>
 	</bean>
 
-	<!--<bean id="messageProcessor" class="org.springframework.integration.kafka.simple.listener.BlockingQueueMessageProcessor">-->
+	<!--<bean id="messageProcessor" class="org.springframework.integration.kafka.listener.BlockingQueueMessageProcessor">-->
 		<!--<constructor-arg index="0" value="100"/>-->
 		<!--<constructor-arg index="1" ref="offsetManager"/>-->
 		<!--<property name="messageListener">-->
@@ -55,18 +55,18 @@
 		<!--</property>-->
 	<!--</bean>-->
 
-	<bean id="messageListener" class="org.springframework.integration.kafka.simpleconsumer.ChannelSendingMessageListener">
+	<bean id="messageListener" class="org.springframework.integration.kafka.listener.ChannelSendingMessageListener">
 		<property name="channelName" value="input"/>
 	</bean>
 
-	<bean id="dispatchingMessageListener" class="org.springframework.integration.kafka.simple.listener.ConcurrentMessageListenerDispatcher">
+	<bean id="dispatchingMessageListener" class="org.springframework.integration.kafka.listener.ConcurrentMessageListenerDispatcher">
 		<constructor-arg index="0" ref="partitions"/>
 		<constructor-arg index="1" value="1"/>
 		<constructor-arg index="2" ref="offsetManager"/>
 		<property name="delegate" ref="messageListener"/>
 	</bean>
 
-	<bean id="kafkaMessageListener" class="org.springframework.integration.kafka.simple.listener.KafkaMessageListenerContainer">
+	<bean id="kafkaMessageListener" class="org.springframework.integration.kafka.listener.KafkaMessageListenerContainer">
 		<constructor-arg index="0" ref="connectionFactory"/>
 		<constructor-arg index="1" ref="offsetManager"/>
 		<constructor-arg index="2" ref="partitions"/>
@@ -77,6 +77,6 @@
 	</bean>
 
 	<int:outbound-channel-adapter channel="input" method="log">
-		<bean class="org.springframework.integration.kafka.simpleconsumer.SimpleLogger"/>
+		<bean class="org.springframework.integration.kafka.listener.SimpleLogger"/>
 	</int:outbound-channel-adapter>
 </beans>

@@ -19,15 +19,12 @@ package org.springframework.integration.kafka.inbound;
 
 import kafka.serializer.Decoder;
 import kafka.serializer.DefaultDecoder;
-import sun.nio.cs.ext.DoubleByte;
 
 import org.springframework.integration.context.OrderlyShutdownCapable;
 import org.springframework.integration.endpoint.MessageProducerSupport;
-import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
-import org.springframework.integration.kafka.simple.consumer.KafkaMessageMetadata;
-import org.springframework.integration.kafka.simple.listener.AbstractDecodingMessageListener;
-import org.springframework.integration.kafka.simple.listener.KafkaMessageListenerContainer;
-import org.springframework.integration.kafka.simple.listener.MessageListener;
+import org.springframework.integration.kafka.core.KafkaMessageMetadata;
+import org.springframework.integration.kafka.listener.AbstractDecodingMessageListener;
+import org.springframework.integration.kafka.listener.KafkaMessageListenerContainer;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.util.Assert;
