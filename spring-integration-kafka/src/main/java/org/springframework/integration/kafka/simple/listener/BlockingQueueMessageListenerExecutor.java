@@ -84,14 +84,14 @@ public class BlockingQueueMessageListenerExecutor implements Runnable,Lifecycle 
 	public void run() {
 		while(this.running) {
 			try {
-				KafkaMessage nextMessage = messages.take();
+				KafkaMessage message = messages.take();
 				try {
-					delegate.onMessage(nextMessage);
+					delegate.onMessage(message);
 				}
 				catch (Exception e) {
-					errorHandler.handle(e);
+					errorHandler.handle(e, message);
 				} finally {
-					offsetManager.updateOffset(nextMessage.getPartition(), nextMessage.getNextOffset());
+					offsetManager.updateOffset(message.getMetadata().getPartition(), message.getMetadata().getNextOffset());
 				}
 			}
 			catch (InterruptedException e) {

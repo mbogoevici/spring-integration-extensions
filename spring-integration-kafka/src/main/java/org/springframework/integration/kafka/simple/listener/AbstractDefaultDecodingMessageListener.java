@@ -15,30 +15,20 @@
  */
 
 
-package org.springframework.integration.kafka.simple.consumer;
+package org.springframework.integration.kafka.simple.listener;
 
-import kafka.message.Message;
+import kafka.serializer.Decoder;
+import kafka.serializer.DefaultDecoder;
+import kafka.utils.VerifiableProperties;
 
 /**
  * @author Marius Bogoevici
  */
-public class KafkaMessage {
+public abstract class AbstractDefaultDecodingMessageListener extends AbstractDecodingMessageListener<byte[], byte[]> {
 
-	private final Message message;
+	public static final Decoder<byte[]> DEFAULT_DECODER = new DefaultDecoder(new VerifiableProperties());
 
-	private final KafkaMessageMetadata metadata;
-
-	public KafkaMessage(Message message, KafkaMessageMetadata metadata) {
-		this.message = message;
-		this.metadata = metadata;
+	public AbstractDefaultDecodingMessageListener() {
+		super(DEFAULT_DECODER, DEFAULT_DECODER);
 	}
-
-	public Message getMessage() {
-		return message;
-	}
-
-	public KafkaMessageMetadata getMetadata() {
-		return metadata;
-	}
-
 }

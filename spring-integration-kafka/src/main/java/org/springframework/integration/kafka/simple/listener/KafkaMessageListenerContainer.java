@@ -228,10 +228,10 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 							for (KafkaMessage kafkaMessage : batch.getMessages()) {
 								// fetch operations may return entire blocks of compressed messages, which may have lower offsets than the ones requested
 								// thus a batch may contain messages that have been processed already
-								if (kafkaMessage.getOffset() >= fetchOffsets.get(batch.getPartition())) {
+								if (kafkaMessage.getMetadata().getOffset() >= fetchOffsets.get(batch.getPartition())) {
 									messageDispatcher.dispatch(kafkaMessage);
 								}
-								highestFetchedOffset = Math.max(highestFetchedOffset, kafkaMessage.getNextOffset());
+								highestFetchedOffset = Math.max(highestFetchedOffset, kafkaMessage.getMetadata().getNextOffset());
 							}
 							fetchOffsets.replace(batch.getPartition(), highestFetchedOffset);
 							// if there are still messages on server, we can go on and retrieve more

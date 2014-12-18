@@ -20,6 +20,8 @@ package org.springframework.integration.kafka.simple.listener;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
+
 /**
 * @author Marius Bogoevici
 */
@@ -28,8 +30,8 @@ class LoggingErrorHandler implements ErrorHandler {
 	private static final Log LOGGER = LogFactory.getLog(LoggingErrorHandler.class);
 
 	@Override
-	public void handle(Exception e) {
-		LOGGER.error(e);
+	public void handle(Exception thrownException, KafkaMessage message) {
+		LOGGER.error(thrownException);
 	}
 
 }

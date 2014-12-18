@@ -56,6 +56,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageBatch;
 import org.springframework.integration.kafka.simple.consumer.KafkaMessageFetchRequest;
+import org.springframework.integration.kafka.simple.consumer.KafkaMessageMetadata;
 import org.springframework.util.Assert;
 
 /**
@@ -125,8 +126,8 @@ public class KafkaBrokerConnection {
 			if (ErrorMapping.NoError() == errorCode) {
 				List<KafkaMessage> kafkaMessages = LazyIterate.collect(fetchResponse.messageSet(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getId()), new Function<MessageAndOffset, KafkaMessage>() {
 					@Override
-					public KafkaMessage valueOf(MessageAndOffset object) {
-						return new KafkaMessage(object.message(), object.offset(), object.nextOffset(), kafkaMessageFetchRequest.getPartition());
+					public KafkaMessage valueOf(MessageAndOffset messageAndOffset) {
+						return new KafkaMessage(messageAndOffset.message(), new KafkaMessageMetadata(kafkaMessageFetchRequest.getPartition(),messageAndOffset.offset(), messageAndOffset.nextOffset()));
 					}
 				}).toList();
 				kafkaResultBuilder.add(kafkaMessageFetchRequest.getPartition()).withResult(new KafkaMessageBatch(kafkaMessageFetchRequest.getPartition(), kafkaMessages,fetchResponse.highWatermark(kafkaMessageFetchRequest.getPartition().getTopic(), kafkaMessageFetchRequest.getPartition().getId())));

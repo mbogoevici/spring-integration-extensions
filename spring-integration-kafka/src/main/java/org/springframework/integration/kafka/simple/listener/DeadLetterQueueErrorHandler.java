@@ -15,30 +15,28 @@
  */
 
 
-package org.springframework.integration.kafka.simple.consumer;
+package org.springframework.integration.kafka.simple.listener;
 
-import kafka.message.Message;
+import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
+import org.springframework.messaging.MessageChannel;
 
 /**
  * @author Marius Bogoevici
  */
-public class KafkaMessage {
+public class DeadLetterQueueErrorHandler implements ErrorHandler {
 
-	private final Message message;
+	private MessageChannel dlqChannel;
 
-	private final KafkaMessageMetadata metadata;
-
-	public KafkaMessage(Message message, KafkaMessageMetadata metadata) {
-		this.message = message;
-		this.metadata = metadata;
+	public MessageChannel getDlqChannel() {
+		return dlqChannel;
 	}
 
-	public Message getMessage() {
-		return message;
+	public void setDlqChannel(MessageChannel dlqChannel) {
+		this.dlqChannel = dlqChannel;
 	}
 
-	public KafkaMessageMetadata getMetadata() {
-		return metadata;
-	}
+	@Override
+	public void handle(Exception thrownException, KafkaMessage message) {
 
+	}
 }

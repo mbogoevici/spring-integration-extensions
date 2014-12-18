@@ -17,11 +17,13 @@
 
 package org.springframework.integration.kafka.simple.listener;
 
+import org.springframework.integration.kafka.simple.consumer.KafkaMessage;
+
 /**
  * @author Marius Bogoevici
  */
 public interface ErrorHandler {
 
-	void handle(Exception e);
+	void handle(Exception thrownException, KafkaMessage message);
 
 }

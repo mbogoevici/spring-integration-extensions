@@ -40,9 +40,13 @@ import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 import org.springframework.util.Assert;
 
 /**
+ * Dispatches {@link KafkaMessage}s across a set of MessageListeners.
+ *
  * @author Marius Bogoevici
  */
 public class ConcurrentMessageListenerDispatcher implements Lifecycle {
+
+	public static final CustomizableThreadFactory THREAD_FACTORY = new CustomizableThreadFactory("dispatcher-");
 
 	private final Object lifecycleMonitor = new Object();
 
@@ -118,7 +122,7 @@ public class ConcurrentMessageListenerDispatcher implements Lifecycle {
 					delegates.put(partitions[i], delegateList.get(i % consumers));
 				}
 				if (this.taskExecutor == null) {
-					this.taskExecutor = Executors.newFixedThreadPool(consumers, new CustomizableThreadFactory("dispatcher-"));
+					this.taskExecutor = Executors.newFixedThreadPool(consumers, THREAD_FACTORY);
 				}
 				delegates.flip().keyBag().toSet().forEach(new Procedure<BlockingQueueMessageListenerExecutor>() {
 					@Override
@@ -153,7 +157,7 @@ public class ConcurrentMessageListenerDispatcher implements Lifecycle {
 	}
 
 	public void dispatch(KafkaMessage message) {
-			delegates.get(message.getPartition()).enqueue(message);
+			delegates.get(message.getMetadata().getPartition()).enqueue(message);
 	}
 
 }

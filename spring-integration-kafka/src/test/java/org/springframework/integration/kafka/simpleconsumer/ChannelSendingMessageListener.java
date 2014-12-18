@@ -57,6 +57,6 @@ public class ChannelSendingMessageListener implements MessageListener, Applicati
 		byte b[] = new byte[message.getMessage().payloadSize()];
 		message.getMessage().payload().get(b);
 		messageChannel.send(MessageBuilder.withPayload(new String(b)).build());
-		System.out.println("Received " + new String(b) + " from partition " + message.getPartition());
+		System.out.println("Received " + new String(b) + " from partition " + message.getMetadata().getPartition());
 	}
 }

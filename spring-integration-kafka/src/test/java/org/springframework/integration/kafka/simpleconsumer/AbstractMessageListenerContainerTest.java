@@ -79,7 +79,7 @@ public abstract class AbstractMessageListenerContainerTest extends AbstractBroke
 			@Override
 			public void onMessage(KafkaMessage message) {
 				StringDecoder decoder = new StringDecoder(new VerifiableProperties());
-				receivedData.put(message.getPartition().getId(),new KeyedMessageWithOffset(decodeKey(message, decoder), decodePayload(message, decoder), message.getOffset(), Thread.currentThread().getName(), message.getPartition().getId()));
+				receivedData.put(message.getMetadata().getPartition().getId(),new KeyedMessageWithOffset(decodeKey(message, decoder), decodePayload(message, decoder), message.getMetadata().getOffset(), Thread.currentThread().getName(), message.getMetadata().getPartition().getId()));
 				latch.countDown();
 			}
 		});
