@@ -78,7 +78,7 @@ public class KafkaMessageListenerContainer implements SmartLifecycle {
 
 	private MessageListener messageListener;
 
-	private OffsetManager offsetManager;
+	private volatile OffsetManager offsetManager;
 
 	private ConcurrentMap<Partition, Long> fetchOffsets;
 

@@ -36,11 +36,11 @@ public class KafkaInboundChannelAdapter extends MessageProducerSupport implement
 
 	public static final String KAFKA_MESSAGE_KEY = "kafka.message.key";
 
-	private static final String KAFKA_MESSAGE_TOPIC = "kafka.message.topic";
+	public static final String KAFKA_MESSAGE_TOPIC = "kafka.message.topic";
 
-	private static final String KAFKA_MESSAGE_PARTITION = "kafka.message.partition.id";
+	public static final String KAFKA_MESSAGE_PARTITION = "kafka.message.partition.id";
 
-	private static final String KAFKA_MESSAGE_OFFSET = "kafka.message.offset";
+	public static final String KAFKA_MESSAGE_OFFSET = "kafka.message.offset";
 
 	private KafkaMessageListenerContainer messageListenerContainer;
 
@@ -53,6 +53,22 @@ public class KafkaInboundChannelAdapter extends MessageProducerSupport implement
 		Assert.isNull(messageListenerContainer.getMessageListener());
 		this.messageListenerContainer = messageListenerContainer;
 		this.messageListenerContainer.setAutoStartup(false);
+	}
+
+	public Decoder<?> getKeyDecoder() {
+		return keyDecoder;
+	}
+
+	public void setKeyDecoder(Decoder<?> keyDecoder) {
+		this.keyDecoder = keyDecoder;
+	}
+
+	public Decoder<?> getPayloadDecoder() {
+		return payloadDecoder;
+	}
+
+	public void setPayloadDecoder(Decoder<?> payloadDecoder) {
+		this.payloadDecoder = payloadDecoder;
 	}
 
 	@Override
